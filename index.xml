@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>SilenT&#39;s Blog</title>
+    <link>http://piscesilent.github.io/</link>
+    <description>Recent content on SilenT&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-CN</language>
+    <managingEditor>gzy_0226@hotmail.com (SilenT)</managingEditor>
+    <webMaster>gzy_0226@hotmail.com (SilenT)</webMaster>
+    <copyright>(c) 2015 SilenT.</copyright>
+    <atom:link href="http://piscesilent.github.io/index.xml" rel="self" type="application/rss+xml" />
+    
+  </channel>
+</rss>
