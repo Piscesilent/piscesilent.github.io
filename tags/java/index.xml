@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>SilenT&#39;s Blog</title>
-    <link>http://piscesilent.github.io/</link>
-    <description>Recent content on SilenT&#39;s Blog</description>
+    <title>Java on SilenT&#39;s Blog</title>
+    <link>http://piscesilent.github.io/tags/java/</link>
+    <description>Recent content in Java on SilenT&#39;s Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-CN</language>
     <managingEditor>gzy_0226@hotmail.com (SilenT)</managingEditor>
     <webMaster>gzy_0226@hotmail.com (SilenT)</webMaster>
     <copyright>(c) 2015 SilenT.</copyright>
     <lastBuildDate>Tue, 24 May 2016 19:49:42 +0800</lastBuildDate>
-    <atom:link href="http://piscesilent.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://piscesilent.github.io/tags/java/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>Elasticsearch 简单入门（一）</title>
