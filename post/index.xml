@@ -9,8 +9,154 @@
     <managingEditor>gzy_0226@hotmail.com (SilenT)</managingEditor>
     <webMaster>gzy_0226@hotmail.com (SilenT)</webMaster>
     <copyright>(c) 2015 SilenT.</copyright>
-    <lastBuildDate>Tue, 24 May 2016 19:49:42 +0800</lastBuildDate>
+    <lastBuildDate>Sun, 29 May 2016 10:35:37 +0800</lastBuildDate>
     <atom:link href="http://piscesilent.github.io/post/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>关于Java异常机制设计</title>
+      <link>http://piscesilent.github.io/2016/05/29/%E5%85%B3%E4%BA%8Ejava%E5%BC%82%E5%B8%B8%E6%9C%BA%E5%88%B6%E8%AE%BE%E8%AE%A1/</link>
+      <pubDate>Sun, 29 May 2016 10:35:37 +0800</pubDate>
+      <author>gzy_0226@hotmail.com (SilenT)</author>
+      <guid>http://piscesilent.github.io/2016/05/29/%E5%85%B3%E4%BA%8Ejava%E5%BC%82%E5%B8%B8%E6%9C%BA%E5%88%B6%E8%AE%BE%E8%AE%A1/</guid>
+      <description>&lt;p&gt;转载请注明：&lt;a href=&#34;http://piscesilent.github.io/2016/05/29/关于java异常机制设计&#34;&gt;http://piscesilent.github.io/2016/05/29/关于java异常机制设计&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Java不同于C，它提供了一套相对完善的异常及其处理体系。最近在工作中给公司项目设计一套异常处理机制，这里简单记录一下一些容易忽略的基本点。&lt;/p&gt;
+
+&lt;p&gt;层次图如下：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;|--java.lang.Object
+|   |
+|   |--java.lang.Throwable
+|       |
+|       |--java.lang.Exception
+|       |    |
+|       |    |--java.lang.RuntimeException
+|       |
+|       |--java.lang.Error
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Throwable 类是 Java 语言中所有错误或异常的超类。只有当对象是此类（或其子类之一）的实例时，才能通过 JVM 或者 throw 语句抛出。类似地，只有此类或其子类之一才可以是 catch 子句中的参数类型。&lt;/p&gt;
+
+&lt;p&gt;显然，可以根据Throwable的两个重要子类划分出两种异常：Error和Exception。&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Error&lt;/p&gt;
+
+&lt;p&gt;An Error is a subclass of Throwable that indicates serious problems that a reasonable application should not try to catch. Most such errors are abnormal conditions. The ThreadDeath error, though a &amp;laquo;normal&amp;raquo; condition, is also a subclass of Error because most applications should not try to catch it.&lt;/p&gt;
+
+&lt;p&gt;A method is not required to declare in its throws clause any subclasses of Error that might be thrown during the execution of the method but not caught, since these errors are abnormal conditions that should never occur. That is, Error and its subclasses are regarded as &lt;strong&gt;unchecked exceptions&lt;/strong&gt; for the purposes of compile-time checking of exceptions.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;从源码的注释中可以看出，Error初衷设计时是不希望被捕获的，因为导致抛出Error的原因都是非正常的原因，比如硬件、系统、JVM等出现了不可预测的错误，在程序中即使捕获了也不能进行修复。如果程序抛出Error，绝大部分的问题都不会出在代码上。&lt;/p&gt;
+
+&lt;p&gt;注意到以上的加粗文字，Error是一种unchecked exceptions，即不需要显式处理的异常。&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Exception&lt;/p&gt;
+
+&lt;p&gt;The class Exception and its subclasses are a form of Throwable that indicates conditions that a reasonable application might want to catch.&lt;/p&gt;
+
+&lt;p&gt;The class Exception and any subclasses that are not also subclasses of RuntimeException are &lt;strong&gt;checked exceptions&lt;/strong&gt;. Checked exceptions need to be declared in a method or constructor&amp;rsquo;s throws clause if they can be thrown by the execution of the method or constructor and propagate outside the method or constructor boundary.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;从注释中看出，Exception是一种期望被捕获的异常，除了RuntimeException以外的Exception，都必须在程序中处理，要不在定义方法时抛出，要不在方法中捕获并进行处理，也就是常见的try-catch-finally代码块。&lt;/p&gt;
+
+&lt;p&gt;着重的文字中显示，Exception(除RuntimeException以外)，是一种checked exceptions，换言之，是一种需要显式处理的异常。抛出这类异常的意图是设计者认为这些异常是可以被恢复的，上层使用者捕获到这些异常时，有能力将程序恢复并继续执行。&lt;/p&gt;
+
+&lt;p&gt;从源码注释中有个疑问，为什么RuntimeException不同于其他Exception，我们来看一下JAVA设计者对RuntimeException的设计意图。&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;RuntimeException&lt;/p&gt;
+
+&lt;p&gt;RuntimeException is the superclass of those exceptions that can be thrown during the normal operation of the Java Virtual Machine.&lt;/p&gt;
+
+&lt;p&gt;RuntimeException and its subclasses are &lt;strong&gt;unchecked exceptions&lt;/strong&gt;. Unchecked exceptions do not need to be declared in a method or constructor&amp;rsquo;s throws clause if they can be thrown by the execution of the method or constructor and propagate outside the method or constructor boundary.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;从文档中可以看出，RuntimeException是一种在JVM正常运行的情况下抛出的异常，是一种运行时期不可恢复的异常。虽然和Error一样同属于unchecked exceptions，但是设计者并没有强调该类异常不希望被捕获(should not try to catch)，所以在必要情况下还是推荐捕获该类异常，并且记录到日志中，以便分析，加强代码鲁棒性。出现该类异常很大一部分是由于业务代码不规范造成的。&lt;/p&gt;
+
+&lt;p&gt;常见的RuntimeException包括：&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;NullPointerException - 空指针引用异常&lt;br /&gt;&lt;/li&gt;
+&lt;li&gt;ClassCastException - 类型强制转换异常&lt;/li&gt;
+&lt;li&gt;IllegalArgumentException - 传递非法参数异常&lt;/li&gt;
+&lt;li&gt;ArithmeticException - 算术运算异常&lt;br /&gt;&lt;/li&gt;
+&lt;li&gt;ArrayStoreException - 向数组中存放与声明类型不兼容对象异常&lt;br /&gt;&lt;/li&gt;
+&lt;li&gt;IndexOutOfBoundsException - 下标越界异常&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;等等。&lt;/p&gt;
+
+&lt;p&gt;在平时使用异常机制时尽量做到以下几点：&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;在捕获异常时不要因为贪图方便，直接捕获Throwable异常。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;    try {
+        //TODO
+    } catch (Throwable e) { //直接捕获Throwable，不可取
+        //TODO
+    }
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;尽量在try-catch中捕获多种类型的异常，并对这些异常做不同的处理。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;    try {
+        //TODO
+    } catch (ServiceException e) { //自定义异常1
+        //TODO
+    } catch (ConsumerException e) {  //自定义异常2
+        //TODO
+    } 
+    ...
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;在抛出异常时，尽量细化抛出的异常，便于捕获及代码可读性。&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;在设计自定义异常时，尽量考虑抛出unchecked exceptions,即RuntimeException及其子类(Error及其子类一般不做考虑)。不要为逻辑代码抛出checked exceptions，除非这个异常非处理不可，否则，调用者需要经常捕获这些早已知道不可能发生的异常。&lt;/p&gt;
+
+&lt;p&gt;自定义异常也不要直接继承Throwable，因为异常分类已经相当明确了。在Java自己类库中,除了Error和Exception，没有异常是直接继承自Throwable的。&lt;/p&gt;
+
+&lt;p&gt;所以一般在设计自定义异常时，多数情况下请继承RuntimeException或其子类。事实上，多数框架设计异常时也是根据这一原则设计的。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;public class SomeoneYouWantException extends RuntimeException {
+    //TODO
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;尽量将异常统一抛给上层调用者，底层只负责向上抛异常，由上层调用者统一之时如何进行处理。如果在每个出现异常的地方都直接进行处理，会导致程序异常处理流程混乱，不利于后期维护和异常错误排查。&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;善用finally，在异常处理体系中，finally总是会被执行，除了以下3种情况：&lt;/p&gt;
+
+&lt;p&gt;1）在try中执行，System.exit(0)终止JVM的运行&lt;/p&gt;
+
+&lt;p&gt;2）当一个线程在执行 try 语句块或者 catch 语句块时被打断（interrupted）或者被终止（killed）&lt;/p&gt;
+
+&lt;p&gt;3）当一个线程在执行 try 语句块或者 catch 语句块时出现不可抗力因素导致计算机终止运行&lt;/p&gt;
+
+&lt;p&gt;面对第一种情况时可以使用Runtime.getRuntime().addShutdownHook()添加钩子，执行本该在finally中执行的语句，剩余两种情况只能通过其他手段避免。&lt;/p&gt;
+
+&lt;p&gt;所以在finally中关闭流或释放资源是一种良好的习惯，当然JDK 7提供了一个更为便捷的try-with-resources机制用于关闭资源。&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Ps：在设计时关于如何选择unchecked exceptions和checked exceptions这两种异常，在&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;http://blog.csdn.net/yanquan345/article/details/19633623&#34;&gt;http://blog.csdn.net/yanquan345/article/details/19633623&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;中讲得很详细，截取如下：&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;何时选用编译时异常：编译时异常是Java特有的，其它语言没有，刚出来时很流行，所以你可以看到流处理包里充斥着IOException，但经过多年的使用，有人觉得编译时异常是一种实验性错误，应该完全丢弃，说这个话的人就是《Think In Java》的一书的作者Eckel，我认为这种说法太绝对了，关于这个是与否也有很大的争论。《Effective Java》一书的作者则认为应避免不必要的编译时异常，因为你抛编译时异常会给强制要求调用者捕获，这会增加他的负担，我是这一观点的支持者。那到底何时抛编译时异常呢？当你发现一个异常情况时，检查这两个条件，为真时选用编译时异常：一、如果调用者可以恢复此异常情况，二、如果调用者不能恢复，但能做出有意义的事，如转译等。如果你不确定调用者能否做出有意义的事，就别使编译时异常，免得被抱怨。还有一条原则，应尽最大可能使用编译时异常来代替错误码，这条也是编译时异常设计的目的。另外，必须注意使用编译时异常的目的是为了恢复执行，所以设计异常类的时候，应提供尽量多的异常数据，以便于上层恢复，比如一个解析错误，可以在设计的异常类写几个变量来存储异常数据：解析出错的句子的内容，解析出错句子的行号，解析出错的字符在行中的位置。这些信息可能帮助调用恢复程序。&lt;/p&gt;
+
+&lt;p&gt;何时选用运行时异常：首先，运行时异常肯定是不可恢复的异常，否则按上段方法处理。这个不可恢复指的是运行时期不可恢复，如果可以修改源代码来避免本异常的发生呢，那说明这是一个编程错误，对于编程错误，一定要抛运行时异常，编程错误一般可以通过修改代码来永久性避免该异常，所以这种情况应该让程序挂掉，相当于爆出一个bug，从而提醒程序员修改代码。这种编程错误可以总结一下，API是调用者与实现者之间的契约，调用者必须遵守契约，比如传入的参数不允许为空，这一点是隐含契约，没必要明确写出来的，如果违反契约，实现者就可以抛运行时异常，让程序挂掉以提醒调用者。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;在设计异常时可以借鉴。&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>Elasticsearch 简单入门（一）</title>

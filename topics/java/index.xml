@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Java on SilenT&#39;s Blog</title>
-    <link>http://piscesilent.github.io/tags/java/</link>
+    <link>http://piscesilent.github.io/topics/java/</link>
     <description>Recent content in Java on SilenT&#39;s Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-CN</language>
@@ -10,7 +10,7 @@
     <webMaster>gzy_0226@hotmail.com (SilenT)</webMaster>
     <copyright>(c) 2015 SilenT.</copyright>
     <lastBuildDate>Sun, 29 May 2016 10:35:37 +0800</lastBuildDate>
-    <atom:link href="http://piscesilent.github.io/tags/java/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://piscesilent.github.io/topics/java/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
       <title>关于Java异常机制设计</title>
@@ -155,132 +155,6 @@
 &lt;/blockquote&gt;
 
 &lt;p&gt;在设计异常时可以借鉴。&lt;/p&gt;
-</description>
-    </item>
-    
-    <item>
-      <title>Elasticsearch 简单入门（一）</title>
-      <link>http://piscesilent.github.io/2016/05/24/elasticsearch-%E7%AE%80%E5%8D%95%E5%85%A5%E9%97%A8%E4%B8%80/</link>
-      <pubDate>Tue, 24 May 2016 19:49:42 +0800</pubDate>
-      <author>gzy_0226@hotmail.com (SilenT)</author>
-      <guid>http://piscesilent.github.io/2016/05/24/elasticsearch-%E7%AE%80%E5%8D%95%E5%85%A5%E9%97%A8%E4%B8%80/</guid>
-      <description>
-
-&lt;h1 id=&#34;you-know-for-search&#34;&gt;You Know, for Search&lt;/h1&gt;
-
-&lt;p&gt;Elasticsearch是一个实时的分布式搜索和分析引擎。它可以用于全文搜索，结构化搜索以及分析。&lt;/p&gt;
-
-&lt;p&gt;它是一个基于Lucene的搜索服务器。它提供了一个分布式多用户能力的全文搜索引擎，基于RESTful web接口设计。&lt;/p&gt;
-
-&lt;p&gt;Elasticsearch是面向文档(document oriented)的，这意味着它可以存储整个对象或文档(document)。&lt;/p&gt;
-
-&lt;p&gt;Elasticsearch集群可以包含多个索引(indices)（数据库），每一个索引可以包含多个类型(types)（表），每一个类型包含多个文档(documents)（行），然后每个文档包含多个字段(Fields)（列）。&lt;/p&gt;
-
-&lt;p&gt;其对应关系如下表：&lt;/p&gt;
-
-&lt;table&gt;
-    &lt;tr&gt;
-        &lt;td&gt;MySQL&lt;/td&gt;
-        &lt;td&gt;Databases&lt;/td&gt;
-        &lt;td&gt;Tables&lt;/td&gt;
-        &lt;td&gt;Rows&lt;/td&gt;
-        &lt;td&gt;Colums&lt;/td&gt;
-    &lt;/tr&gt;
-    &lt;tr&gt;
-        &lt;td&gt;Elasticsearch&lt;/td&gt;
-        &lt;td&gt;Indices&lt;/td&gt;
-        &lt;td&gt;Types&lt;/td&gt;
-        &lt;td&gt;Documents&lt;/td&gt;
-        &lt;td&gt;Fields&lt;/td&gt;
-    &lt;/tr&gt;
-&lt;/table&gt;
-
-&lt;p&gt;简单部署：&lt;/p&gt;
-
-&lt;p&gt;1、在以下地址中&lt;/p&gt;
-
-&lt;blockquote&gt;
-&lt;p&gt;&lt;a href=&#34;https://www.elastic.co/downloads/elasticsearch&#34;&gt;https://www.elastic.co/downloads/elasticsearch&lt;/a&gt;&lt;/p&gt;
-&lt;/blockquote&gt;
-
-&lt;p&gt;下载最新的Es，Unzip&lt;/p&gt;
-
-&lt;p&gt;2、&lt;/p&gt;
-
-&lt;p&gt;执行：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;sh ./bin/elasticsearch
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;默认RESTful API端口为9200,默认JAVA API端口为9300。&lt;/p&gt;
-
-&lt;p&gt;3、在控制台中输入：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;curl -XGET &amp;quot;http://127.0.0.1:9200/&amp;quot;
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;输出：&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;{
-  &amp;quot;name&amp;quot;: &amp;quot;Alibar&amp;quot;,
-  &amp;quot;cluster_name&amp;quot;: &amp;quot;elasticsearch&amp;quot;,
-  &amp;quot;version&amp;quot;: {
-    &amp;quot;number&amp;quot;: &amp;quot;2.2.0&amp;quot;,
-    &amp;quot;build_hash&amp;quot;: &amp;quot;8ff36d139e16f8720f2947ef62c8167a888992fe&amp;quot;,
-    &amp;quot;build_timestamp&amp;quot;: &amp;quot;2016-01-27T13:32:39Z&amp;quot;,
-    &amp;quot;build_snapshot&amp;quot;: false,
-    &amp;quot;lucene_version&amp;quot;: &amp;quot;5.4.1&amp;quot;
-  },
-  &amp;quot;tagline&amp;quot;: &amp;quot;You Know, for Search&amp;quot;
-}
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;BINGO&lt;/p&gt;
-
-&lt;p&gt;elasticsearch 单机环境就已经配置成功了。&lt;/p&gt;
-
-&lt;p&gt;Ps：关于&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;./config/elasticsearch.yml
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;的简单配置说明：&lt;/p&gt;
-
-&lt;p&gt;1、&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;cluster.name
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;集群名，默认是elasticsearch，用于区分在同一网段下的不同elasticsearch集群。&lt;/p&gt;
-
-&lt;p&gt;2、&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;network.bind_host
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;绑定的ip地址，默认为0.0.0.0&lt;/p&gt;
-
-&lt;p&gt;3、&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;network.publish_host
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;节点发现地址，一般配置成内网地址，用于节点间的互相发现、通讯&lt;/p&gt;
-
-&lt;p&gt;4、&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;network.host
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;用于同时设置&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;network.bind_host
-&lt;/code&gt;&lt;/pre&gt;
-
-&lt;p&gt;和&lt;/p&gt;
-
-&lt;pre&gt;&lt;code&gt;network.publish_host
-&lt;/code&gt;&lt;/pre&gt;
 </description>
     </item>
     
