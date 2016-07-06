@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]> <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]> <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <title>跨域资源共享（CORS）介绍及在Spring MVC &#43; Shiro 的应用  &middot; SilenT&#39;s Blog</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="HandheldFriendly" content="True">
+<meta name="MobileOptimized" content="320">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+
+<meta name="description" content="跨域资源共享（CORS）介绍及在Spring MVC &#43; Shiro 的应用" />
+
+<meta name="keywords" content="跨域, CORS, Spring MVC, Shiro, ">
+
+
+<meta property="og:title" content="跨域资源共享（CORS）介绍及在Spring MVC &#43; Shiro 的应用  &middot; SilenT&#39;s Blog ">
+<meta property="og:site_name" content="SilenT&#39;s Blog"/>
+<meta property="og:url" content="http://piscesilent.github.io/2016/07/05/%E8%B7%A8%E5%9F%9F%E8%B5%84%E6%BA%90%E5%85%B1%E4%BA%ABcors%E4%BB%8B%E7%BB%8D%E5%8F%8A%E5%9C%A8spring-mvc--shiro-%E7%9A%84%E5%BA%94%E7%94%A8/" />
+<meta property="og:locale" content="zh-CN">
+
+
+<meta property="og:type" content="article" />
+<meta property="og:description" content="跨域资源共享（CORS）介绍及在Spring MVC &#43; Shiro 的应用"/>
+<meta property="og:article:published_time" content="2016-07-05T09:07:42&#43;08:00" />
+<meta property="og:article:modified_time" content="2016-07-05T09:07:42&#43;08:00" />
+
+  
+    
+<meta property="og:article:tag" content="跨域">
+    
+<meta property="og:article:tag" content="CORS">
+    
+<meta property="og:article:tag" content="Spring MVC">
+    
+<meta property="og:article:tag" content="Shiro">
+    
+  
+
+  
+
+<script type="application/ld+json">
+  {
+    "@context": "http://schema.org",
+    "@type": "Article",
+    "headline": "跨域资源共享（CORS）介绍及在Spring MVC \x2b Shiro 的应用",
+    "author": {
+      "@type": "Person",
+      "name": "http://profiles.google.com/+?rel=author"
+    },
+    "datePublished": "2016-07-05",
+    "description": "跨域资源共享（CORS）介绍及在Spring MVC \x2b Shiro 的应用",
+    "wordCount":  291 
+  }
+</script>
+
+
+
+<link rel="canonical" href="http://piscesilent.github.io/2016/07/05/%E8%B7%A8%E5%9F%9F%E8%B5%84%E6%BA%90%E5%85%B1%E4%BA%ABcors%E4%BB%8B%E7%BB%8D%E5%8F%8A%E5%9C%A8spring-mvc--shiro-%E7%9A%84%E5%BA%94%E7%94%A8/" />
+
+<link rel="apple-touch-icon-precomposed" sizes="144x144" href="http://piscesilent.github.io/touch-icon-144-precomposed.png">
+<link href="http://piscesilent.github.io/favicon.png" rel="icon">
+
+<meta name="generator" content="Hugo 0.15" />
+
+  <!--[if lt IE 9]>
+<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+<script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+<![endif]-->
+
+<link href='https://fonts.googleapis.com/css?family=Merriweather:300%7CRaleway%7COpen+Sans' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" href="http://piscesilent.github.io/css/font-awesome.min.css">
+<link rel="stylesheet" href="http://piscesilent.github.io/css/style.css">
+<link rel="stylesheet" href="http://piscesilent.github.io/css/highlight/default.css">
+
+  
+</head>
+<body>
+  <main id="main-wrapper" class="container main_wrapper has-sidebar">
+    <header id="main-header" class="container main_header">
+  <div class="container brand">
+  <div class="container title h1-like">
+  <a class="baselink" href="http://piscesilent.github.io">
+  SilenT&rsquo;s Blog
+
+</a>
+
+</div>
+
+  
+<div class="container topline">
+  
+  会编程的地质狗
+
+
+</div>
+
+
+</div>
+
+  <nav class="container nav primary no-print">
+  
+
+<a class="homelink" href="http://piscesilent.github.io">主页</a>
+
+
+  
+<a href="http://piscesilent.github.io/post">所有文章</a>
+
+<a href="http://piscesilent.github.io/tags">标签</a>
+
+<a href="http://piscesilent.github.io/topics">主题</a>
+
+
+</nav>
+
+<div class="container nav secondary no-print">
+  
+<a id="contact-link-email" class="contact_link" href="mailto:gzy_0226@hotmail.com">
+  <span class="fa fa-envelope-square"></span><span>email</span></a>
+
+
+
+<a id="contact-link-github" class="contact_link" href="https://github.com/piscesilent">
+  <span class="fa fa-github-square"></span><span>github</span></a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+
+
+  
+
+</header>
+
+
+<article id="main-content" class="container main_content single">
+  <header class="container hat">
+  <h1>跨域资源共享（CORS）介绍及在Spring MVC &#43; Shiro 的应用
+</h1>
+
+  <div class="metas">
+<time datetime="2016-07-05">5 Jul, 2016</time>
+
+
+  
+    &middot; by SilenT
+  
+  &middot; Read in about 2 min
+  &middot; (291 Words)
+  <br>
+  
+<a class="label" href="http://piscesilent.github.io/tags/web">Web</a>
+
+<a class="label" href="http://piscesilent.github.io/tags/java">Java</a>
+
+
+
+</div>
+
+</header>
+
+  <div class="container content">
+  
+
+<p>CORS，即跨域资源共享（Cross-Origin Resource Sharing）
+跨站HTTP请求是指发起请求的资源所在域不同于该请求所指向资源所在的域的HTTP请求。</p>
+
+<p>CORS旨在定义一种规范让浏览器在接收到从提供者获取的资源时能够正决定是否应该将此资源分发给消费者作进一步处理。CROS利用资源提供者的显式授权来决定目标资源是否应该与消费者共享。</p>
+
+<p>JavaScript出于安全方面的考虑，不允许跨域调用其他页面的对象，其同源策略说明如下：</p>
+
+<table>
+    <tr>
+        <th>链接</th>
+        <th>说明</th>
+        <th>是否跨域</th>
+    </tr>
+    <tr>
+        <td><p>www.a.com/a</p><p>www.a.com/a</p></td>
+        <td>同一域名</td>
+        <td>否</td>
+    </tr>
+    <tr>
+        <td><p>www.a.com/a</p><p>www.a.com/b</p></td>
+        <td>同一域名下的不同目录</td>
+        <td>否</td>
+    </tr>
+    <tr>
+        <td><p>www.a.com:8080/a</p><p>www.a.com:8081/a</p></td>
+        <td>同一域名下的不同端口</td>
+        <td>是</td>
+    </tr>
+    <tr>
+        <td><p>www.a.com/a</p><p>api.a.com/a</p></td>
+        <td>子域不同</td>
+        <td>是</td>
+    </tr>
+    <tr>
+        <td><p>www.a.com/a</p><p>www.b.com/a</p></td>
+        <td>不同域名</td>
+        <td>是</td>
+    </tr>
+</table>
+
+<p>#一、CORS相关 #
+<img src="https://upload.wikimedia.org/wikipedia/commons/c/ca/Flowchart_showing_Simple_and_Preflight_XHR.svg" alt="image" />
+当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从<a href="http://www.a.com尝试去访问www.b.com下的资源时，">http://www.a.com尝试去访问www.b.com下的资源时，</a></p>
+
+<pre><code>Origin:http://www.a.com
+</code></pre>
+
+<p>将会附加在发往www.b.com的请求头上</p>
+
+<p>当服务端接受到这个OPTIONS请求时，会有三种处理方式：</p>
+
+<p>1、不允许进行跨域资源请求</p>
+
+<p>2、允许所有的域进行资源访问，即在响应头上加入：</p>
+
+<pre><code>Access-Control-Allow-Origin: *
+</code></pre>
+
+<p>如果这样做，处于安全性的考虑，响应头上将不能携带cookie，所以一般的情况应该是这样：</p>
+
+<p>3、在响应头上声明可以进行访问的域：</p>
+
+<pre><code>Access-Control-Allow-Origin: http://www.a.com
+</code></pre>
+
+<p>这样，www.a.com就可以请求到www.b.com的资源。</p>
+
+<p>除此之外，与CORS相关的请求头信息还有：</p>
+
+<pre><code>Access-Control-Request-Method
+</code></pre>
+
+<p>这个请求头的作用在于指定接下来的跨域请求中的方法。</p>
+
+<pre><code>Access-Control-Request-Header
+</code></pre>
+
+<p>这个是指定跨域请求时所携带的自定义头信息。</p>
+
+<p>与CORS相关的响应体信息还有：</p>
+
+<pre><code>Access-Control-Allow-Methods
+</code></pre>
+
+<p>这个响应头的作用在于指定在接下来的真正的请求中被允许的方法（Method），比如在这里设置为&raquo;POST&raquo;，如果接下来的请求是PUT方法，那么将会失败。</p>
+
+<pre><code>Access-Control-Allow-Headers
+</code></pre>
+
+<p>这个是指请求中所允许携带的请求头信息。</p>
+
+<pre><code>Access-Control-Max-Age
+</code></pre>
+
+<p>可以指定缓存时间，避免浏览器频繁发送OPTIONS请求。</p>
+
+<pre><code>Access-Control-Allow-Credentials
+</code></pre>
+
+<p>这个响应头用来表明服务端是否支持用户凭证，比如Cookie、HTTP-Authentication、证书等。如果需要，则设置此值为true。</p>
+
+<h1 id="二-spring-mvc-中的应用:127baeb4ce9aec89c09687b7b2232e22">二、Spring MVC 中的应用</h1>
+
+<p>在实际Spring MVC + Shiro 项目中，由于进行前后端分离改造不可避免的要遇到跨域问题。</p>
+
+<p>首先，先要解决的是Spring MVC对OPTIONS请求拦截的问题。在Spring MVC servlet配置中，添加</p>
+
+<pre><code>&lt;init-param&gt;
+    &lt;param-name&gt;dispatchOptionsRequest&lt;/param-name&gt;
+    &lt;param-value&gt;true&lt;/param-value&gt;
+&lt;/init-param&gt;
+</code></pre>
+
+<p>允许DispatcherServlet分发器分发Options请求。</p>
+
+<p>在配置bean时，需要注意的是shiro也是会拦截OPTIONS请求的。由于OPTIONS请求中没有携带任何cookie信息，shiro直接会认为该请求没有权限进而拦截在外。所以，在shiro中要自定义一个filter，用于排除OPTIONS请求。</p>
+
+<pre><code>public class CorsUserAuthenticationFilter extends UserFilter {
+    /**
+     * 不过滤OPTIONS方法
+     */
+    @Override
+    protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
+        HttpServletRequest httpRequest = WebUtils.toHttp(request);
+        if (&quot;OPTIONS&quot;.equalsIgnoreCase(httpRequest.getMethod())) {
+            return true;
+        }
+
+        return super.isAccessAllowed(request, response, mappedValue);
+    }
+}
+</code></pre>
+
+<p>在这里继承了shiro自带的UserFilter，并重写isAccessAllowed函数，如果请求的Method为OPTIONS时，返回true，表示不过滤。</p>
+
+<p>经过上述两步，OPTIONS请求我们就可以在程序中真正拿到并且可以控制其响应头参数，达到想要的目的。</p>
+
+<p>一开始在项目中使用比较原始的方法，在复杂请求的同名接口上新增一个OPTIONS请求处理：</p>
+
+<pre><code>@RequestMapping(value = &quot;&quot;, method = RequestMethod.OPTIONS)
+public HttpEntity optionsHandle(AppUser appUser, HttpServletRequest request,
+        HttpServletResponse response) {
+    MultiValueMap&lt;String, String&gt; map = new LinkedMultiValueMap&lt;String, String&gt;();
+    String origin = request.getHeader(&quot;Origin&quot;);
+    map.add(&quot;Access-Control-Allow-Credentials&quot;, &quot;true&quot;);
+    map.add(&quot;Access-Control-Allow-Origin&quot;, origin);
+    map.add(&quot;Access-Control-Allow-Methods&quot;, &quot;POST,GET,OPTIONS,DELETE,PUT,OPTIONS&quot;);
+    map.add(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Requested-With,Content-Type,Accept&quot;);
+    HttpEntity he = new HttpEntity(map);
+    return he;
+}
+</code></pre>
+
+<p>要注意的是@RequestMapping中的value要和复杂请求的value一致，即要保证他们俩的URL是一致的。在这边我只是为了方便调试才将请求的Origin直接放入
+    Access-Control-Allow-Origin
+中。在部署的时候，如果为了安全性考虑，可以将这个值写死，指定特定的域名才能跨域请求资源。</p>
+
+<p>当时测试通过后在考虑到项目中这么多接口，是否应该换一种方式进行处理更为妥当。考虑之后决定采用拦截器的方式实现。</p>
+
+<p>在Spring mvc的xml中添加：</p>
+
+<pre><code>&lt;mvc:interceptors&gt;
+    &lt;mvc:interceptor&gt;
+        &lt;mvc:mapping path=&quot;/**&quot; /&gt;
+        &lt;bean class=&quot;xxx.interceptor.CorsRequestInterceptor&quot; /&gt;
+    &lt;/mvc:interceptor&gt;
+&lt;/mvc:interceptors&gt;
+</code></pre>
+
+<p>这里配置了一个全地址匹配的拦截器，拦截器的实现如下：</p>
+
+<pre><code>public class CorsRequestInterceptor implements HandlerInterceptor {
+
+    String origin = &quot;&quot;;
+
+    @Override
+    public void afterCompletion(HttpServletRequest arg0,
+            HttpServletResponse arg1, Object arg2, Exception arg3)
+            throws Exception {
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest arg0, HttpServletResponse response,
+            Object arg2, ModelAndView arg3) throws Exception {
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
+            Object arg2) throws Exception {
+        origin = request.getHeader(&quot;Origin&quot;);
+        response.addHeader(&quot;Access-Control-Allow-Credentials&quot;,&quot;true&quot;);
+        response.addHeader(&quot;Access-Control-Allow-Origin&quot;, origin);
+        response.addHeader(&quot;Access-Control-Allow-Methods&quot;, &quot;POST,GET,DELETE,PUT,OPTIONS&quot;);
+        response.addHeader(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Requested-With,Content-Type,Accept&quot;);
+        return true;
+    }
+}
+</code></pre>
+
+<p>这样，可以在所有的响应中都加上跨域信息。</p>
+
+<p>对于OPTIONS方法的处理，通过一个匹配全地址的Controller进行处理：</p>
+
+<pre><code>@Controller
+public class OptionsMethodController {
+    @RequestMapping(value = {&quot;/**&quot;}, method = RequestMethod.OPTIONS)
+    public void saveOptions(HttpServletRequest resquest,HttpServletResponse response) {
+        response.setStatus(200);
+    }
+}
+</code></pre>
+
+<p>通过以上配置，就可以实现全接口的跨域处理。</p>
+
+<p>Ps：在Spring MVC 4.2以上版本中还可以通过以下方式实现：</p>
+
+<pre><code>@Configuration
+public class MigratedConfiguration {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurerAdapter() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping(&quot;/**&quot;).allowedOrigins(&quot;http://www.a.com&quot;);
+            }
+        };
+    }
+}
+</code></pre>
+
+</div>
+
+
+  <footer class="container">
+  <div class="container navigation no-print">
+  <h2>Navigation</h2>
+  
+  
+
+    
+    <a class="prev" href="http://piscesilent.github.io/2016/05/29/%E5%85%B3%E4%BA%8Ejava%E5%BC%82%E5%B8%B8%E6%9C%BA%E5%88%B6%E8%AE%BE%E8%AE%A1/" title="关于Java异常机制设计">
+      Previous
+    </a>
+    
+
+    
+
+  
+
+
+</div>
+
+  <div class="container comments">
+  <h2>Comments</h2>
+  
+<div id="disqus_thread"></div>
+<script type="text/javascript">
+  (function() {
+    
+    
+    if (window.location.hostname == "localhost")
+      return;
+
+    var dsq = document.createElement('script'); dsq.async = true; dsq.type = 'text/javascript';
+    dsq.src = '//your_disqus_shortname.disqus.com/embed.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+  })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+
+
+</div>
+
+</footer>
+
+</article>
+      <footer id="main-footer" class="container main_footer">
+  
+
+  <div class="container nav foot no-print">
+  
+
+  <a class="toplink" href="#">back to top</a>
+
+</div>
+
+  <div class="container credits">
+  
+
+  
+<div class="container copyright">
+  
+  &copy; 2015 SilenT.
+
+
+</div>
+
+
+</div>
+
+</footer>
+
+    </main>
+    
+<script type="text/javascript">
+  (function() {
+    
+    
+    if (window.location.hostname == "localhost")
+      return;
+
+    var dsq = document.createElement('script'); dsq.async = true; dsq.type = 'text/javascript';
+    dsq.src = '//your_disqus_shortname.disqus.com/count.js';
+    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+  })();
+</script>
+
+
+
+<script src="http://piscesilent.github.io/js/highlight.pack.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'Your Google Analytics tracking code', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+
+    
+  </body>
+</html>
+

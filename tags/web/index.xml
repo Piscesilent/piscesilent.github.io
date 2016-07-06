@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Web on SilenT&#39;s Blog</title>
+    <link>http://piscesilent.github.io/tags/web/</link>
+    <description>Recent content in Web on SilenT&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-CN</language>
+    <managingEditor>gzy_0226@hotmail.com (SilenT)</managingEditor>
+    <webMaster>gzy_0226@hotmail.com (SilenT)</webMaster>
+    <copyright>(c) 2015 SilenT.</copyright>
+    <lastBuildDate>Tue, 05 Jul 2016 09:07:42 +0800</lastBuildDate>
+    <atom:link href="http://piscesilent.github.io/tags/web/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>跨域资源共享（CORS）介绍及在Spring MVC &#43; Shiro 的应用</title>
+      <link>http://piscesilent.github.io/2016/07/05/%E8%B7%A8%E5%9F%9F%E8%B5%84%E6%BA%90%E5%85%B1%E4%BA%ABcors%E4%BB%8B%E7%BB%8D%E5%8F%8A%E5%9C%A8spring-mvc--shiro-%E7%9A%84%E5%BA%94%E7%94%A8/</link>
+      <pubDate>Tue, 05 Jul 2016 09:07:42 +0800</pubDate>
+      <author>gzy_0226@hotmail.com (SilenT)</author>
+      <guid>http://piscesilent.github.io/2016/07/05/%E8%B7%A8%E5%9F%9F%E8%B5%84%E6%BA%90%E5%85%B1%E4%BA%ABcors%E4%BB%8B%E7%BB%8D%E5%8F%8A%E5%9C%A8spring-mvc--shiro-%E7%9A%84%E5%BA%94%E7%94%A8/</guid>
+      <description>
+
+&lt;p&gt;CORS，即跨域资源共享（Cross-Origin Resource Sharing）
+跨站HTTP请求是指发起请求的资源所在域不同于该请求所指向资源所在的域的HTTP请求。&lt;/p&gt;
+
+&lt;p&gt;CORS旨在定义一种规范让浏览器在接收到从提供者获取的资源时能够正决定是否应该将此资源分发给消费者作进一步处理。CROS利用资源提供者的显式授权来决定目标资源是否应该与消费者共享。&lt;/p&gt;
+
+&lt;p&gt;JavaScript出于安全方面的考虑，不允许跨域调用其他页面的对象，其同源策略说明如下：&lt;/p&gt;
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;链接&lt;/th&gt;
+        &lt;th&gt;说明&lt;/th&gt;
+        &lt;th&gt;是否跨域&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;&lt;p&gt;www.a.com/a&lt;/p&gt;&lt;p&gt;www.a.com/a&lt;/p&gt;&lt;/td&gt;
+        &lt;td&gt;同一域名&lt;/td&gt;
+        &lt;td&gt;否&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;&lt;p&gt;www.a.com/a&lt;/p&gt;&lt;p&gt;www.a.com/b&lt;/p&gt;&lt;/td&gt;
+        &lt;td&gt;同一域名下的不同目录&lt;/td&gt;
+        &lt;td&gt;否&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;&lt;p&gt;www.a.com:8080/a&lt;/p&gt;&lt;p&gt;www.a.com:8081/a&lt;/p&gt;&lt;/td&gt;
+        &lt;td&gt;同一域名下的不同端口&lt;/td&gt;
+        &lt;td&gt;是&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;&lt;p&gt;www.a.com/a&lt;/p&gt;&lt;p&gt;api.a.com/a&lt;/p&gt;&lt;/td&gt;
+        &lt;td&gt;子域不同&lt;/td&gt;
+        &lt;td&gt;是&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;&lt;p&gt;www.a.com/a&lt;/p&gt;&lt;p&gt;www.b.com/a&lt;/p&gt;&lt;/td&gt;
+        &lt;td&gt;不同域名&lt;/td&gt;
+        &lt;td&gt;是&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;p&gt;#一、CORS相关 #
+&lt;img src=&#34;https://upload.wikimedia.org/wikipedia/commons/c/ca/Flowchart_showing_Simple_and_Preflight_XHR.svg&#34; alt=&#34;image&#34; /&gt;
+当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从&lt;a href=&#34;http://www.a.com尝试去访问www.b.com下的资源时，&#34;&gt;http://www.a.com尝试去访问www.b.com下的资源时，&lt;/a&gt;&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Origin:http://www.a.com
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;将会附加在发往www.b.com的请求头上&lt;/p&gt;
+
+&lt;p&gt;当服务端接受到这个OPTIONS请求时，会有三种处理方式：&lt;/p&gt;
+
+&lt;p&gt;1、不允许进行跨域资源请求&lt;/p&gt;
+
+&lt;p&gt;2、允许所有的域进行资源访问，即在响应头上加入：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Allow-Origin: *
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;如果这样做，处于安全性的考虑，响应头上将不能携带cookie，所以一般的情况应该是这样：&lt;/p&gt;
+
+&lt;p&gt;3、在响应头上声明可以进行访问的域：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Allow-Origin: http://www.a.com
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这样，www.a.com就可以请求到www.b.com的资源。&lt;/p&gt;
+
+&lt;p&gt;除此之外，与CORS相关的请求头信息还有：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Request-Method
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这个请求头的作用在于指定接下来的跨域请求中的方法。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Request-Header
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这个是指定跨域请求时所携带的自定义头信息。&lt;/p&gt;
+
+&lt;p&gt;与CORS相关的响应体信息还有：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Allow-Methods
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这个响应头的作用在于指定在接下来的真正的请求中被允许的方法（Method），比如在这里设置为&amp;raquo;POST&amp;raquo;，如果接下来的请求是PUT方法，那么将会失败。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Allow-Headers
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这个是指请求中所允许携带的请求头信息。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Max-Age
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;可以指定缓存时间，避免浏览器频繁发送OPTIONS请求。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Allow-Credentials
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这个响应头用来表明服务端是否支持用户凭证，比如Cookie、HTTP-Authentication、证书等。如果需要，则设置此值为true。&lt;/p&gt;
+
+&lt;h1 id=&#34;二-spring-mvc-中的应用:127baeb4ce9aec89c09687b7b2232e22&#34;&gt;二、Spring MVC 中的应用&lt;/h1&gt;
+
+&lt;p&gt;在实际Spring MVC + Shiro 项目中，由于进行前后端分离改造不可避免的要遇到跨域问题。&lt;/p&gt;
+
+&lt;p&gt;首先，先要解决的是Spring MVC对OPTIONS请求拦截的问题。在Spring MVC servlet配置中，添加&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;init-param&amp;gt;
+    &amp;lt;param-name&amp;gt;dispatchOptionsRequest&amp;lt;/param-name&amp;gt;
+    &amp;lt;param-value&amp;gt;true&amp;lt;/param-value&amp;gt;
+&amp;lt;/init-param&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;允许DispatcherServlet分发器分发Options请求。&lt;/p&gt;
+
+&lt;p&gt;在配置bean时，需要注意的是shiro也是会拦截OPTIONS请求的。由于OPTIONS请求中没有携带任何cookie信息，shiro直接会认为该请求没有权限进而拦截在外。所以，在shiro中要自定义一个filter，用于排除OPTIONS请求。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;public class CorsUserAuthenticationFilter extends UserFilter {
+    /**
+     * 不过滤OPTIONS方法
+     */
+    @Override
+    protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
+        HttpServletRequest httpRequest = WebUtils.toHttp(request);
+        if (&amp;quot;OPTIONS&amp;quot;.equalsIgnoreCase(httpRequest.getMethod())) {
+            return true;
+        }
+
+        return super.isAccessAllowed(request, response, mappedValue);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;在这里继承了shiro自带的UserFilter，并重写isAccessAllowed函数，如果请求的Method为OPTIONS时，返回true，表示不过滤。&lt;/p&gt;
+
+&lt;p&gt;经过上述两步，OPTIONS请求我们就可以在程序中真正拿到并且可以控制其响应头参数，达到想要的目的。&lt;/p&gt;
+
+&lt;p&gt;一开始在项目中使用比较原始的方法，在复杂请求的同名接口上新增一个OPTIONS请求处理：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@RequestMapping(value = &amp;quot;&amp;quot;, method = RequestMethod.OPTIONS)
+public HttpEntity optionsHandle(AppUser appUser, HttpServletRequest request,
+        HttpServletResponse response) {
+    MultiValueMap&amp;lt;String, String&amp;gt; map = new LinkedMultiValueMap&amp;lt;String, String&amp;gt;();
+    String origin = request.getHeader(&amp;quot;Origin&amp;quot;);
+    map.add(&amp;quot;Access-Control-Allow-Credentials&amp;quot;, &amp;quot;true&amp;quot;);
+    map.add(&amp;quot;Access-Control-Allow-Origin&amp;quot;, origin);
+    map.add(&amp;quot;Access-Control-Allow-Methods&amp;quot;, &amp;quot;POST,GET,OPTIONS,DELETE,PUT,OPTIONS&amp;quot;);
+    map.add(&amp;quot;Access-Control-Allow-Headers&amp;quot;, &amp;quot;X-Requested-With,Content-Type,Accept&amp;quot;);
+    HttpEntity he = new HttpEntity(map);
+    return he;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;要注意的是@RequestMapping中的value要和复杂请求的value一致，即要保证他们俩的URL是一致的。在这边我只是为了方便调试才将请求的Origin直接放入
+    Access-Control-Allow-Origin
+中。在部署的时候，如果为了安全性考虑，可以将这个值写死，指定特定的域名才能跨域请求资源。&lt;/p&gt;
+
+&lt;p&gt;当时测试通过后在考虑到项目中这么多接口，是否应该换一种方式进行处理更为妥当。考虑之后决定采用拦截器的方式实现。&lt;/p&gt;
+
+&lt;p&gt;在Spring mvc的xml中添加：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;mvc:interceptors&amp;gt;
+    &amp;lt;mvc:interceptor&amp;gt;
+        &amp;lt;mvc:mapping path=&amp;quot;/**&amp;quot; /&amp;gt;
+        &amp;lt;bean class=&amp;quot;xxx.interceptor.CorsRequestInterceptor&amp;quot; /&amp;gt;
+    &amp;lt;/mvc:interceptor&amp;gt;
+&amp;lt;/mvc:interceptors&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这里配置了一个全地址匹配的拦截器，拦截器的实现如下：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;public class CorsRequestInterceptor implements HandlerInterceptor {
+
+    String origin = &amp;quot;&amp;quot;;
+
+    @Override
+    public void afterCompletion(HttpServletRequest arg0,
+            HttpServletResponse arg1, Object arg2, Exception arg3)
+            throws Exception {
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest arg0, HttpServletResponse response,
+            Object arg2, ModelAndView arg3) throws Exception {
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
+            Object arg2) throws Exception {
+        origin = request.getHeader(&amp;quot;Origin&amp;quot;);
+        response.addHeader(&amp;quot;Access-Control-Allow-Credentials&amp;quot;,&amp;quot;true&amp;quot;);
+        response.addHeader(&amp;quot;Access-Control-Allow-Origin&amp;quot;, origin);
+        response.addHeader(&amp;quot;Access-Control-Allow-Methods&amp;quot;, &amp;quot;POST,GET,DELETE,PUT,OPTIONS&amp;quot;);
+        response.addHeader(&amp;quot;Access-Control-Allow-Headers&amp;quot;, &amp;quot;X-Requested-With,Content-Type,Accept&amp;quot;);
+        return true;
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这样，可以在所有的响应中都加上跨域信息。&lt;/p&gt;
+
+&lt;p&gt;对于OPTIONS方法的处理，通过一个匹配全地址的Controller进行处理：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@Controller
+public class OptionsMethodController {
+    @RequestMapping(value = {&amp;quot;/**&amp;quot;}, method = RequestMethod.OPTIONS)
+    public void saveOptions(HttpServletRequest resquest,HttpServletResponse response) {
+        response.setStatus(200);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;通过以上配置，就可以实现全接口的跨域处理。&lt;/p&gt;
+
+&lt;p&gt;Ps：在Spring MVC 4.2以上版本中还可以通过以下方式实现：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@Configuration
+public class MigratedConfiguration {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurerAdapter() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping(&amp;quot;/**&amp;quot;).allowedOrigins(&amp;quot;http://www.a.com&amp;quot;);
+            }
+        };
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>
