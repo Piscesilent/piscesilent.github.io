@@ -13,11 +13,11 @@
     <atom:link href="http://piscesilent.github.io/index.xml" rel="self" type="application/rss+xml" />
     
     <item>
-      <title>跨域资源共享（CORS）介绍及在Spring MVC &#43; Shiro 的应用</title>
-      <link>http://piscesilent.github.io/2016/07/05/%E8%B7%A8%E5%9F%9F%E8%B5%84%E6%BA%90%E5%85%B1%E4%BA%ABcors%E4%BB%8B%E7%BB%8D%E5%8F%8A%E5%9C%A8spring-mvc--shiro-%E7%9A%84%E5%BA%94%E7%94%A8/</link>
+      <title>跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用</title>
+      <link>http://piscesilent.github.io/2016/07/05/%E8%B7%A8%E5%9F%9F%E8%B5%84%E6%BA%90%E5%85%B1%E4%BA%ABcors%E4%BB%8B%E7%BB%8D%E5%8F%8A%E5%9C%A8spring-mvc-with-shiro-%E7%9A%84%E5%BA%94%E7%94%A8/</link>
       <pubDate>Tue, 05 Jul 2016 09:07:42 +0800</pubDate>
       <author>gzy_0226@hotmail.com (SilenT)</author>
-      <guid>http://piscesilent.github.io/2016/07/05/%E8%B7%A8%E5%9F%9F%E8%B5%84%E6%BA%90%E5%85%B1%E4%BA%ABcors%E4%BB%8B%E7%BB%8D%E5%8F%8A%E5%9C%A8spring-mvc--shiro-%E7%9A%84%E5%BA%94%E7%94%A8/</guid>
+      <guid>http://piscesilent.github.io/2016/07/05/%E8%B7%A8%E5%9F%9F%E8%B5%84%E6%BA%90%E5%85%B1%E4%BA%ABcors%E4%BB%8B%E7%BB%8D%E5%8F%8A%E5%9C%A8spring-mvc-with-shiro-%E7%9A%84%E5%BA%94%E7%94%A8/</guid>
       <description>
 
 &lt;p&gt;CORS，即跨域资源共享（Cross-Origin Resource Sharing）
@@ -62,7 +62,7 @@
 
 &lt;hr /&gt;
 
-&lt;h1 id=&#34;一-cors相关:127baeb4ce9aec89c09687b7b2232e22&#34;&gt;一、CORS相关&lt;/h1&gt;
+&lt;h1 id=&#34;一-cors相关&#34;&gt;一、CORS相关&lt;/h1&gt;
 
 &lt;p&gt;当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从
     &lt;a href=&#34;http://www.a.com&#34;&gt;http://www.a.com&lt;/a&gt;
@@ -127,7 +127,7 @@
 
 &lt;p&gt;这个响应头用来表明服务端是否支持用户凭证，比如Cookie、HTTP-Authentication、证书等。如果需要，则设置此值为true。&lt;/p&gt;
 
-&lt;h1 id=&#34;二-spring-mvc-中的应用:127baeb4ce9aec89c09687b7b2232e22&#34;&gt;二、Spring MVC 中的应用&lt;/h1&gt;
+&lt;h1 id=&#34;二-spring-mvc-中的应用&#34;&gt;二、Spring MVC 中的应用&lt;/h1&gt;
 
 &lt;p&gt;在实际Spring MVC + Shiro 项目中，由于进行前后端分离改造不可避免的要遇到跨域问题。&lt;/p&gt;
 
@@ -412,7 +412,7 @@ public class MigratedConfiguration {
       <guid>http://piscesilent.github.io/2016/05/24/elasticsearch-%E7%AE%80%E5%8D%95%E5%85%A5%E9%97%A8%E4%B8%80/</guid>
       <description>
 
-&lt;h1 id=&#34;you-know-for-search:6253cd651a8063d61e929241d7964c7f&#34;&gt;You Know, for Search&lt;/h1&gt;
+&lt;h1 id=&#34;you-know-for-search&#34;&gt;You Know, for Search&lt;/h1&gt;
 
 &lt;p&gt;Elasticsearch是一个实时的分布式搜索和分析引擎。它可以用于全文搜索，结构化搜索以及分析。&lt;/p&gt;
 
