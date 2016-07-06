@@ -64,7 +64,11 @@
 
 &lt;h1 id=&#34;一-cors相关:127baeb4ce9aec89c09687b7b2232e22&#34;&gt;一、CORS相关&lt;/h1&gt;
 
-&lt;p&gt;当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从&lt;a href=&#34;http://www.a.com尝试去访问www.b.com下的资源时，&#34;&gt;http://www.a.com尝试去访问www.b.com下的资源时，&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从
+    &lt;a href=&#34;http://www.a.com&#34;&gt;http://www.a.com&lt;/a&gt;
+尝试去访问
+    www.b.com
+下的资源时，&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;Origin:http://www.a.com
 &lt;/code&gt;&lt;/pre&gt;
@@ -408,7 +412,7 @@ public class MigratedConfiguration {
       <guid>http://piscesilent.github.io/2016/05/24/elasticsearch-%E7%AE%80%E5%8D%95%E5%85%A5%E9%97%A8%E4%B8%80/</guid>
       <description>
 
-&lt;h1 id=&#34;you-know-for-search&#34;&gt;You Know, for Search&lt;/h1&gt;
+&lt;h1 id=&#34;you-know-for-search:6253cd651a8063d61e929241d7964c7f&#34;&gt;You Know, for Search&lt;/h1&gt;
 
 &lt;p&gt;Elasticsearch是一个实时的分布式搜索和分析引擎。它可以用于全文搜索，结构化搜索以及分析。&lt;/p&gt;
 
