@@ -60,9 +60,11 @@
     &lt;/tr&gt;
 &lt;/table&gt;
 
-&lt;p&gt;#一、CORS相关 #
-&lt;img src=&#34;https://upload.wikimedia.org/wikipedia/commons/c/ca/Flowchart_showing_Simple_and_Preflight_XHR.svg&#34; alt=&#34;image&#34; /&gt;
-当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从&lt;a href=&#34;http://www.a.com尝试去访问www.b.com下的资源时，&#34;&gt;http://www.a.com尝试去访问www.b.com下的资源时，&lt;/a&gt;&lt;/p&gt;
+&lt;hr /&gt;
+
+&lt;h1 id=&#34;一-cors相关:127baeb4ce9aec89c09687b7b2232e22&#34;&gt;一、CORS相关&lt;/h1&gt;
+
+&lt;p&gt;当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从&lt;a href=&#34;http://www.a.com尝试去访问www.b.com下的资源时，&#34;&gt;http://www.a.com尝试去访问www.b.com下的资源时，&lt;/a&gt;&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;Origin:http://www.a.com
 &lt;/code&gt;&lt;/pre&gt;
