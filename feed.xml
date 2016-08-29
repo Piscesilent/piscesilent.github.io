@@ -1,0 +1,531 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>SilenT&#39;s Blog</title>
+    <link>http://Piscesilent.github.io/</link>
+    <description>Recent content on SilenT&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-CN</language>
+    <lastBuildDate>Tue, 05 Jul 2016 09:07:42 +0800</lastBuildDate>
+    <atom:link href="http://Piscesilent.github.io/feed/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用</title>
+      <link>http://piscesilent.github.io/post/CORS/</link>
+      <pubDate>Tue, 05 Jul 2016 09:07:42 +0800</pubDate>
+      
+      <guid>http://piscesilent.github.io/post/CORS/</guid>
+      <description>
+
+&lt;p&gt;CORS，即跨域资源共享（Cross-Origin Resource Sharing）
+跨站HTTP请求是指发起请求的资源所在域不同于该请求所指向资源所在的域的HTTP请求。&lt;/p&gt;
+
+&lt;p&gt;CORS旨在定义一种规范让浏览器在接收到从提供者获取的资源时能够正决定是否应该将此资源分发给消费者作进一步处理。CROS利用资源提供者的显式授权来决定目标资源是否应该与消费者共享。&lt;/p&gt;
+
+&lt;p&gt;JavaScript出于安全方面的考虑，不允许跨域调用其他页面的对象，其同源策略说明如下：&lt;/p&gt;
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;th&gt;链接&lt;/th&gt;
+        &lt;th&gt;说明&lt;/th&gt;
+        &lt;th&gt;是否跨域&lt;/th&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;&lt;p&gt;www.a.com/a&lt;/p&gt;&lt;p&gt;www.a.com/a&lt;/p&gt;&lt;/td&gt;
+        &lt;td&gt;同一域名&lt;/td&gt;
+        &lt;td&gt;否&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;&lt;p&gt;www.a.com/a&lt;/p&gt;&lt;p&gt;www.a.com/b&lt;/p&gt;&lt;/td&gt;
+        &lt;td&gt;同一域名下的不同目录&lt;/td&gt;
+        &lt;td&gt;否&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;&lt;p&gt;www.a.com:8080/a&lt;/p&gt;&lt;p&gt;www.a.com:8081/a&lt;/p&gt;&lt;/td&gt;
+        &lt;td&gt;同一域名下的不同端口&lt;/td&gt;
+        &lt;td&gt;是&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;&lt;p&gt;www.a.com/a&lt;/p&gt;&lt;p&gt;api.a.com/a&lt;/p&gt;&lt;/td&gt;
+        &lt;td&gt;子域不同&lt;/td&gt;
+        &lt;td&gt;是&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;&lt;p&gt;www.a.com/a&lt;/p&gt;&lt;p&gt;www.b.com/a&lt;/p&gt;&lt;/td&gt;
+        &lt;td&gt;不同域名&lt;/td&gt;
+        &lt;td&gt;是&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;hr /&gt;
+
+&lt;h1 id=&#34;一-cors相关&#34;&gt;一、CORS相关&lt;/h1&gt;
+
+&lt;p&gt;当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从
+    &lt;a href=&#34;http://www.a.com&#34;&gt;http://www.a.com&lt;/a&gt;
+尝试去访问
+    www.b.com
+下的资源时，&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Origin:http://www.a.com
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;将会附加在发往www.b.com的请求头上&lt;/p&gt;
+
+&lt;p&gt;当服务端接受到这个OPTIONS请求时，会有三种处理方式：&lt;/p&gt;
+
+&lt;p&gt;1、不允许进行跨域资源请求&lt;/p&gt;
+
+&lt;p&gt;2、允许所有的域进行资源访问，即在响应头上加入：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Allow-Origin: *
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;如果这样做，处于安全性的考虑，响应头上将不能携带cookie，所以一般的情况应该是这样：&lt;/p&gt;
+
+&lt;p&gt;3、在响应头上声明可以进行访问的域：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Allow-Origin: http://www.a.com
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这样，www.a.com就可以请求到www.b.com的资源。&lt;/p&gt;
+
+&lt;p&gt;除此之外，与CORS相关的请求头信息还有：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Request-Method
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这个请求头的作用在于指定接下来的跨域请求中的方法。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Request-Header
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这个是指定跨域请求时所携带的自定义头信息。&lt;/p&gt;
+
+&lt;p&gt;与CORS相关的响应体信息还有：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Allow-Methods
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这个响应头的作用在于指定在接下来的真正的请求中被允许的方法（Method），比如在这里设置为&amp;rdquo;POST&amp;rdquo;，如果接下来的请求是PUT方法，那么将会失败。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Allow-Headers
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这个是指请求中所允许携带的请求头信息。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Max-Age
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;可以指定缓存时间，避免浏览器频繁发送OPTIONS请求。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Access-Control-Allow-Credentials
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这个响应头用来表明服务端是否支持用户凭证，比如Cookie、HTTP-Authentication、证书等。如果需要，则设置此值为true。&lt;/p&gt;
+
+&lt;h1 id=&#34;二-spring-mvc-中的应用&#34;&gt;二、Spring MVC 中的应用&lt;/h1&gt;
+
+&lt;p&gt;在实际Spring MVC + Shiro 项目中，由于进行前后端分离改造不可避免的要遇到跨域问题。&lt;/p&gt;
+
+&lt;p&gt;首先，先要解决的是Spring MVC对OPTIONS请求拦截的问题。在Spring MVC servlet配置中，添加&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;init-param&amp;gt;
+    &amp;lt;param-name&amp;gt;dispatchOptionsRequest&amp;lt;/param-name&amp;gt;
+    &amp;lt;param-value&amp;gt;true&amp;lt;/param-value&amp;gt;
+&amp;lt;/init-param&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;允许DispatcherServlet分发器分发Options请求。&lt;/p&gt;
+
+&lt;p&gt;在配置bean时，需要注意的是shiro也是会拦截OPTIONS请求的。由于OPTIONS请求中没有携带任何cookie信息，shiro直接会认为该请求没有权限进而拦截在外。所以，在shiro中要自定义一个filter，用于排除OPTIONS请求。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;public class CorsUserAuthenticationFilter extends UserFilter {
+    /**
+     * 不过滤OPTIONS方法
+     */
+    @Override
+    protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
+        HttpServletRequest httpRequest = WebUtils.toHttp(request);
+        if (&amp;quot;OPTIONS&amp;quot;.equalsIgnoreCase(httpRequest.getMethod())) {
+            return true;
+        }
+
+        return super.isAccessAllowed(request, response, mappedValue);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;在这里继承了shiro自带的UserFilter，并重写isAccessAllowed函数，如果请求的Method为OPTIONS时，返回true，表示不过滤。&lt;/p&gt;
+
+&lt;p&gt;经过上述两步，OPTIONS请求我们就可以在程序中真正拿到并且可以控制其响应头参数，达到想要的目的。&lt;/p&gt;
+
+&lt;p&gt;一开始在项目中使用比较原始的方法，在复杂请求的同名接口上新增一个OPTIONS请求处理：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@RequestMapping(value = &amp;quot;&amp;quot;, method = RequestMethod.OPTIONS)
+public HttpEntity optionsHandle(AppUser appUser, HttpServletRequest request,
+        HttpServletResponse response) {
+    MultiValueMap&amp;lt;String, String&amp;gt; map = new LinkedMultiValueMap&amp;lt;String, String&amp;gt;();
+    String origin = request.getHeader(&amp;quot;Origin&amp;quot;);
+    map.add(&amp;quot;Access-Control-Allow-Credentials&amp;quot;, &amp;quot;true&amp;quot;);
+    map.add(&amp;quot;Access-Control-Allow-Origin&amp;quot;, origin);
+    map.add(&amp;quot;Access-Control-Allow-Methods&amp;quot;, &amp;quot;POST,GET,OPTIONS,DELETE,PUT,OPTIONS&amp;quot;);
+    map.add(&amp;quot;Access-Control-Allow-Headers&amp;quot;, &amp;quot;X-Requested-With,Content-Type,Accept&amp;quot;);
+    HttpEntity he = new HttpEntity(map);
+    return he;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;要注意的是@RequestMapping中的value要和复杂请求的value一致，即要保证他们俩的URL是一致的。在这边我只是为了方便调试才将请求的Origin直接放入
+    Access-Control-Allow-Origin
+中。在部署的时候，如果为了安全性考虑，可以将这个值写死，指定特定的域名才能跨域请求资源。&lt;/p&gt;
+
+&lt;p&gt;当时测试通过后在考虑到项目中这么多接口，是否应该换一种方式进行处理更为妥当。考虑之后决定采用拦截器的方式实现。&lt;/p&gt;
+
+&lt;p&gt;在Spring mvc的xml中添加：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;lt;mvc:interceptors&amp;gt;
+    &amp;lt;mvc:interceptor&amp;gt;
+        &amp;lt;mvc:mapping path=&amp;quot;/**&amp;quot; /&amp;gt;
+        &amp;lt;bean class=&amp;quot;xxx.interceptor.CorsRequestInterceptor&amp;quot; /&amp;gt;
+    &amp;lt;/mvc:interceptor&amp;gt;
+&amp;lt;/mvc:interceptors&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这里配置了一个全地址匹配的拦截器，拦截器的实现如下：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;public class CorsRequestInterceptor implements HandlerInterceptor {
+
+    String origin = &amp;quot;&amp;quot;;
+
+    @Override
+    public void afterCompletion(HttpServletRequest arg0,
+            HttpServletResponse arg1, Object arg2, Exception arg3)
+            throws Exception {
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest arg0, HttpServletResponse response,
+            Object arg2, ModelAndView arg3) throws Exception {
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
+            Object arg2) throws Exception {
+        origin = request.getHeader(&amp;quot;Origin&amp;quot;);
+        response.addHeader(&amp;quot;Access-Control-Allow-Credentials&amp;quot;,&amp;quot;true&amp;quot;);
+        response.addHeader(&amp;quot;Access-Control-Allow-Origin&amp;quot;, origin);
+        response.addHeader(&amp;quot;Access-Control-Allow-Methods&amp;quot;, &amp;quot;POST,GET,DELETE,PUT,OPTIONS&amp;quot;);
+        response.addHeader(&amp;quot;Access-Control-Allow-Headers&amp;quot;, &amp;quot;X-Requested-With,Content-Type,Accept&amp;quot;);
+        return true;
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;这样，可以在所有的响应中都加上跨域信息。&lt;/p&gt;
+
+&lt;p&gt;对于OPTIONS方法的处理，通过一个匹配全地址的Controller进行处理：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@Controller
+public class OptionsMethodController {
+    @RequestMapping(value = {&amp;quot;/**&amp;quot;}, method = RequestMethod.OPTIONS)
+    public void saveOptions(HttpServletRequest resquest,HttpServletResponse response) {
+        response.setStatus(200);
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;通过以上配置，就可以实现全接口的跨域处理。&lt;/p&gt;
+
+&lt;p&gt;Ps：在Spring MVC 4.2以上版本中还可以通过以下方式实现：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@Configuration
+public class MigratedConfiguration {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurerAdapter() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping(&amp;quot;/**&amp;quot;).allowedOrigins(&amp;quot;http://www.a.com&amp;quot;);
+            }
+        };
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>关于Java异常机制设计</title>
+      <link>http://piscesilent.github.io/post/Java_exception/</link>
+      <pubDate>Sun, 29 May 2016 10:35:37 +0800</pubDate>
+      
+      <guid>http://piscesilent.github.io/post/Java_exception/</guid>
+      <description>&lt;p&gt;转载请注明：&lt;a href=&#34;http://piscesilent.github.io/2016/05/29/关于java异常机制设计&#34;&gt;http://piscesilent.github.io/2016/05/29/关于java异常机制设计&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;Java不同于C，它提供了一套相对完善的异常及其处理体系。最近在工作中给公司项目设计一套异常处理机制，这里简单记录一下一些容易忽略的基本点。&lt;/p&gt;
+
+&lt;p&gt;层次图如下：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;|--java.lang.Object
+|   |
+|   |--java.lang.Throwable
+|       |
+|       |--java.lang.Exception
+|       |    |
+|       |    |--java.lang.RuntimeException
+|       |
+|       |--java.lang.Error
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Throwable 类是 Java 语言中所有错误或异常的超类。只有当对象是此类（或其子类之一）的实例时，才能通过 JVM 或者 throw 语句抛出。类似地，只有此类或其子类之一才可以是 catch 子句中的参数类型。&lt;/p&gt;
+
+&lt;p&gt;显然，可以根据Throwable的两个重要子类划分出两种异常：Error和Exception。&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Error&lt;/p&gt;
+
+&lt;p&gt;An Error is a subclass of Throwable that indicates serious problems that a reasonable application should not try to catch. Most such errors are abnormal conditions. The ThreadDeath error, though a &amp;ldquo;normal&amp;rdquo; condition, is also a subclass of Error because most applications should not try to catch it.&lt;/p&gt;
+
+&lt;p&gt;A method is not required to declare in its throws clause any subclasses of Error that might be thrown during the execution of the method but not caught, since these errors are abnormal conditions that should never occur. That is, Error and its subclasses are regarded as &lt;strong&gt;unchecked exceptions&lt;/strong&gt; for the purposes of compile-time checking of exceptions.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;从源码的注释中可以看出，Error初衷设计时是不希望被捕获的，因为导致抛出Error的原因都是非正常的原因，比如硬件、系统、JVM等出现了不可预测的错误，在程序中即使捕获了也不能进行修复。如果程序抛出Error，绝大部分的问题都不会出在代码上。&lt;/p&gt;
+
+&lt;p&gt;注意到以上的加粗文字，Error是一种unchecked exceptions，即不需要显式处理的异常。&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;Exception&lt;/p&gt;
+
+&lt;p&gt;The class Exception and its subclasses are a form of Throwable that indicates conditions that a reasonable application might want to catch.&lt;/p&gt;
+
+&lt;p&gt;The class Exception and any subclasses that are not also subclasses of RuntimeException are &lt;strong&gt;checked exceptions&lt;/strong&gt;. Checked exceptions need to be declared in a method or constructor&amp;rsquo;s throws clause if they can be thrown by the execution of the method or constructor and propagate outside the method or constructor boundary.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;从注释中看出，Exception是一种期望被捕获的异常，除了RuntimeException以外的Exception，都必须在程序中处理，要不在定义方法时抛出，要不在方法中捕获并进行处理，也就是常见的try-catch-finally代码块。&lt;/p&gt;
+
+&lt;p&gt;着重的文字中显示，Exception(除RuntimeException以外)，是一种checked exceptions，换言之，是一种需要显式处理的异常。抛出这类异常的意图是设计者认为这些异常是可以被恢复的，上层使用者捕获到这些异常时，有能力将程序恢复并继续执行。&lt;/p&gt;
+
+&lt;p&gt;从源码注释中有个疑问，为什么RuntimeException不同于其他Exception，我们来看一下JAVA设计者对RuntimeException的设计意图。&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;RuntimeException&lt;/p&gt;
+
+&lt;p&gt;RuntimeException is the superclass of those exceptions that can be thrown during the normal operation of the Java Virtual Machine.&lt;/p&gt;
+
+&lt;p&gt;RuntimeException and its subclasses are &lt;strong&gt;unchecked exceptions&lt;/strong&gt;. Unchecked exceptions do not need to be declared in a method or constructor&amp;rsquo;s throws clause if they can be thrown by the execution of the method or constructor and propagate outside the method or constructor boundary.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;从文档中可以看出，RuntimeException是一种在JVM正常运行的情况下抛出的异常，是一种运行时期不可恢复的异常。虽然和Error一样同属于unchecked exceptions，但是设计者并没有强调该类异常不希望被捕获(should not try to catch)，所以在必要情况下还是推荐捕获该类异常，并且记录到日志中，以便分析，加强代码鲁棒性。出现该类异常很大一部分是由于业务代码不规范造成的。&lt;/p&gt;
+
+&lt;p&gt;常见的RuntimeException包括：&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;NullPointerException - 空指针引用异常&lt;br /&gt;&lt;/li&gt;
+&lt;li&gt;ClassCastException - 类型强制转换异常&lt;/li&gt;
+&lt;li&gt;IllegalArgumentException - 传递非法参数异常&lt;/li&gt;
+&lt;li&gt;ArithmeticException - 算术运算异常&lt;br /&gt;&lt;/li&gt;
+&lt;li&gt;ArrayStoreException - 向数组中存放与声明类型不兼容对象异常&lt;br /&gt;&lt;/li&gt;
+&lt;li&gt;IndexOutOfBoundsException - 下标越界异常&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;等等。&lt;/p&gt;
+
+&lt;p&gt;在平时使用异常机制时尽量做到以下几点：&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;在捕获异常时不要因为贪图方便，直接捕获Throwable异常。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;    try {
+        //TODO
+    } catch (Throwable e) { //直接捕获Throwable，不可取
+        //TODO
+    }
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;尽量在try-catch中捕获多种类型的异常，并对这些异常做不同的处理。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;    try {
+        //TODO
+    } catch (ServiceException e) { //自定义异常1
+        //TODO
+    } catch (ConsumerException e) {  //自定义异常2
+        //TODO
+    } 
+    ...
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;在抛出异常时，尽量细化抛出的异常，便于捕获及代码可读性。&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;在设计自定义异常时，尽量考虑抛出unchecked exceptions,即RuntimeException及其子类(Error及其子类一般不做考虑)。不要为逻辑代码抛出checked exceptions，除非这个异常非处理不可，否则，调用者需要经常捕获这些早已知道不可能发生的异常。&lt;/p&gt;
+
+&lt;p&gt;自定义异常也不要直接继承Throwable，因为异常分类已经相当明确了。在Java自己类库中,除了Error和Exception，没有异常是直接继承自Throwable的。&lt;/p&gt;
+
+&lt;p&gt;所以一般在设计自定义异常时，多数情况下请继承RuntimeException或其子类。事实上，多数框架设计异常时也是根据这一原则设计的。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;public class SomeoneYouWantException extends RuntimeException {
+    //TODO
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;尽量将异常统一抛给上层调用者，底层只负责向上抛异常，由上层调用者统一之时如何进行处理。如果在每个出现异常的地方都直接进行处理，会导致程序异常处理流程混乱，不利于后期维护和异常错误排查。&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;善用finally，在异常处理体系中，finally总是会被执行，除了以下3种情况：&lt;/p&gt;
+
+&lt;p&gt;1）在try中执行，System.exit(0)终止JVM的运行&lt;/p&gt;
+
+&lt;p&gt;2）当一个线程在执行 try 语句块或者 catch 语句块时被打断（interrupted）或者被终止（killed）&lt;/p&gt;
+
+&lt;p&gt;3）当一个线程在执行 try 语句块或者 catch 语句块时出现不可抗力因素导致计算机终止运行&lt;/p&gt;
+
+&lt;p&gt;面对第一种情况时可以使用Runtime.getRuntime().addShutdownHook()添加钩子，执行本该在finally中执行的语句，剩余两种情况只能通过其他手段避免。&lt;/p&gt;
+
+&lt;p&gt;所以在finally中关闭流或释放资源是一种良好的习惯，当然JDK 7提供了一个更为便捷的try-with-resources机制用于关闭资源。&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Ps：在设计时关于如何选择unchecked exceptions和checked exceptions这两种异常，在&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;http://blog.csdn.net/yanquan345/article/details/19633623&#34;&gt;http://blog.csdn.net/yanquan345/article/details/19633623&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;中讲得很详细，截取如下：&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;何时选用编译时异常：编译时异常是Java特有的，其它语言没有，刚出来时很流行，所以你可以看到流处理包里充斥着IOException，但经过多年的使用，有人觉得编译时异常是一种实验性错误，应该完全丢弃，说这个话的人就是《Think In Java》的一书的作者Eckel，我认为这种说法太绝对了，关于这个是与否也有很大的争论。《Effective Java》一书的作者则认为应避免不必要的编译时异常，因为你抛编译时异常会给强制要求调用者捕获，这会增加他的负担，我是这一观点的支持者。那到底何时抛编译时异常呢？当你发现一个异常情况时，检查这两个条件，为真时选用编译时异常：一、如果调用者可以恢复此异常情况，二、如果调用者不能恢复，但能做出有意义的事，如转译等。如果你不确定调用者能否做出有意义的事，就别使编译时异常，免得被抱怨。还有一条原则，应尽最大可能使用编译时异常来代替错误码，这条也是编译时异常设计的目的。另外，必须注意使用编译时异常的目的是为了恢复执行，所以设计异常类的时候，应提供尽量多的异常数据，以便于上层恢复，比如一个解析错误，可以在设计的异常类写几个变量来存储异常数据：解析出错的句子的内容，解析出错句子的行号，解析出错的字符在行中的位置。这些信息可能帮助调用恢复程序。&lt;/p&gt;
+
+&lt;p&gt;何时选用运行时异常：首先，运行时异常肯定是不可恢复的异常，否则按上段方法处理。这个不可恢复指的是运行时期不可恢复，如果可以修改源代码来避免本异常的发生呢，那说明这是一个编程错误，对于编程错误，一定要抛运行时异常，编程错误一般可以通过修改代码来永久性避免该异常，所以这种情况应该让程序挂掉，相当于爆出一个bug，从而提醒程序员修改代码。这种编程错误可以总结一下，API是调用者与实现者之间的契约，调用者必须遵守契约，比如传入的参数不允许为空，这一点是隐含契约，没必要明确写出来的，如果违反契约，实现者就可以抛运行时异常，让程序挂掉以提醒调用者。&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;在设计异常时可以借鉴。&lt;/p&gt;
+</description>
+    </item>
+    
+    <item>
+      <title>Elasticsearch 简单入门（一）</title>
+      <link>http://piscesilent.github.io/post/Elasticsearch1/</link>
+      <pubDate>Tue, 24 May 2016 19:49:42 +0800</pubDate>
+      
+      <guid>http://piscesilent.github.io/post/Elasticsearch1/</guid>
+      <description>
+
+&lt;h1 id=&#34;you-know-for-search&#34;&gt;You Know, for Search&lt;/h1&gt;
+
+&lt;p&gt;Elasticsearch是一个实时的分布式搜索和分析引擎。它可以用于全文搜索，结构化搜索以及分析。&lt;/p&gt;
+
+&lt;p&gt;它是一个基于Lucene的搜索服务器。它提供了一个分布式多用户能力的全文搜索引擎，基于RESTful web接口设计。&lt;/p&gt;
+
+&lt;p&gt;Elasticsearch是面向文档(document oriented)的，这意味着它可以存储整个对象或文档(document)。&lt;/p&gt;
+
+&lt;p&gt;Elasticsearch集群可以包含多个索引(indices)（数据库），每一个索引可以包含多个类型(types)（表），每一个类型包含多个文档(documents)（行），然后每个文档包含多个字段(Fields)（列）。&lt;/p&gt;
+
+&lt;p&gt;其对应关系如下表：&lt;/p&gt;
+
+&lt;table&gt;
+    &lt;tr&gt;
+        &lt;td&gt;MySQL&lt;/td&gt;
+        &lt;td&gt;Databases&lt;/td&gt;
+        &lt;td&gt;Tables&lt;/td&gt;
+        &lt;td&gt;Rows&lt;/td&gt;
+        &lt;td&gt;Colums&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+        &lt;td&gt;Elasticsearch&lt;/td&gt;
+        &lt;td&gt;Indices&lt;/td&gt;
+        &lt;td&gt;Types&lt;/td&gt;
+        &lt;td&gt;Documents&lt;/td&gt;
+        &lt;td&gt;Fields&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;p&gt;简单部署：&lt;/p&gt;
+
+&lt;p&gt;1、在以下地址中&lt;/p&gt;
+
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&#34;https://www.elastic.co/downloads/elasticsearch&#34;&gt;https://www.elastic.co/downloads/elasticsearch&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;下载最新的Es，Unzip&lt;/p&gt;
+
+&lt;p&gt;2、&lt;/p&gt;
+
+&lt;p&gt;执行：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;sh ./bin/elasticsearch
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;默认RESTful API端口为9200,默认JAVA API端口为9300。&lt;/p&gt;
+
+&lt;p&gt;3、在控制台中输入：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;curl -XGET &amp;quot;http://127.0.0.1:9200/&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;输出：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;{
+  &amp;quot;name&amp;quot;: &amp;quot;Alibar&amp;quot;,
+  &amp;quot;cluster_name&amp;quot;: &amp;quot;elasticsearch&amp;quot;,
+  &amp;quot;version&amp;quot;: {
+    &amp;quot;number&amp;quot;: &amp;quot;2.2.0&amp;quot;,
+    &amp;quot;build_hash&amp;quot;: &amp;quot;8ff36d139e16f8720f2947ef62c8167a888992fe&amp;quot;,
+    &amp;quot;build_timestamp&amp;quot;: &amp;quot;2016-01-27T13:32:39Z&amp;quot;,
+    &amp;quot;build_snapshot&amp;quot;: false,
+    &amp;quot;lucene_version&amp;quot;: &amp;quot;5.4.1&amp;quot;
+  },
+  &amp;quot;tagline&amp;quot;: &amp;quot;You Know, for Search&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;BINGO&lt;/p&gt;
+
+&lt;p&gt;elasticsearch 单机环境就已经配置成功了。&lt;/p&gt;
+
+&lt;p&gt;Ps：关于&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;./config/elasticsearch.yml
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;的简单配置说明：&lt;/p&gt;
+
+&lt;p&gt;1、&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;cluster.name
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;集群名，默认是elasticsearch，用于区分在同一网段下的不同elasticsearch集群。&lt;/p&gt;
+
+&lt;p&gt;2、&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;network.bind_host
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;绑定的ip地址，默认为0.0.0.0&lt;/p&gt;
+
+&lt;p&gt;3、&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;network.publish_host
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;节点发现地址，一般配置成内网地址，用于节点间的互相发现、通讯&lt;/p&gt;
+
+&lt;p&gt;4、&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;network.host
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;用于同时设置&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;network.bind_host
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;和&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;network.publish_host
+&lt;/code&gt;&lt;/pre&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

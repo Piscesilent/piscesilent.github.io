@@ -1,0 +1,613 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用 - SilenT&#39;s Blog</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+  <meta name="keywords" content="跨域,CORS,Spring MVC,Shiro,">
+  <meta name="description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用">
+  <meta name="author" content="SilenT">
+  <meta itemprop="name" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用 - SilenT&#39;s Blog">
+  <meta itemprop="description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用">
+  <meta itemprop="image" content="http://piscesilent.github.io/img/author.jpg">
+  
+  <meta name="twitter:description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" />
+  
+  <link rel="shortcut icon" href="http://piscesilent.github.io/img/favicon.ico"/>
+  <link rel="apple-touch-icon" href="http://piscesilent.github.io/apple-touch-icon.png" />
+  <link rel="apple-touch-icon-precomposed" href="http://piscesilent.github.io/apple-touch-icon.png" />
+  <link rel="stylesheet" href="http://piscesilent.github.io/highlight/styles/github.css">
+  <script src="http://piscesilent.github.io/highlight/highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+  <link rel="stylesheet" href="http://piscesilent.github.io/font/hack/css/hack.min.css">
+  <link rel="stylesheet" href="http://piscesilent.github.io/css/style.css">
+</head>
+
+<body>
+  <header>
+    <div>
+  
+  <div id="imglogo">
+    <a href="http://piscesilent.github.io/"><img src="http://piscesilent.github.io/img/logo.svg" alt="SilenT&#39;s Blog" title="SilenT&#39;s Blog"/></a>
+  </div>
+  
+  <div id="textlogo">
+    <h1 class="site-name"><a href="http://piscesilent.github.io/" title="SilenT&#39;s Blog">SilenT&#39;s Blog</a></h1>
+    <h2 class="blog-motto">Stay hungry, stay foolish</h2>
+  </div>
+  <div class="navbar"><a class="navbutton navmobile" href="#" title="menu"></a></div>
+  <nav class="animated">
+    <ul>
+      
+      <li><a href="/">首页</a></li>
+      
+      <li><a href="/about">关于</a></li>
+      
+      <li>
+        <form class="search" method="get" action="https://www.google.com/search">
+          <div>
+            <input type="text" id="search" name="q" placeholder="搜索">
+          </div>
+        </form>
+      </li>
+    </ul>
+  </nav>
+</div>
+
+  </header>
+  <div id="container">
+    <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody">
+    <header class="article-info clearfix">
+  <h1 itemprop="name">
+      <a href="http://piscesilent.github.io/post/CORS/" title="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" itemprop="url">跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="http://Piscesilent.github.io/" title="SilenT">SilenT</a>
+    
+  </p>
+  <p class="article-time">
+    <time datetime="2016-07-05 09:07:42 &#43;0800 CST" itemprop="datePublished">2016年07月05日</time>
+  </p>
+</header>
+
+	<div class="article-content">
+    
+    
+
+<p>CORS，即跨域资源共享（Cross-Origin Resource Sharing）
+跨站HTTP请求是指发起请求的资源所在域不同于该请求所指向资源所在的域的HTTP请求。</p>
+
+<p>CORS旨在定义一种规范让浏览器在接收到从提供者获取的资源时能够正决定是否应该将此资源分发给消费者作进一步处理。CROS利用资源提供者的显式授权来决定目标资源是否应该与消费者共享。</p>
+
+<p>JavaScript出于安全方面的考虑，不允许跨域调用其他页面的对象，其同源策略说明如下：</p>
+
+<table>
+    <tr>
+        <th>链接</th>
+        <th>说明</th>
+        <th>是否跨域</th>
+    </tr>
+    <tr>
+        <td><p>www.a.com/a</p><p>www.a.com/a</p></td>
+        <td>同一域名</td>
+        <td>否</td>
+    </tr>
+    <tr>
+        <td><p>www.a.com/a</p><p>www.a.com/b</p></td>
+        <td>同一域名下的不同目录</td>
+        <td>否</td>
+    </tr>
+    <tr>
+        <td><p>www.a.com:8080/a</p><p>www.a.com:8081/a</p></td>
+        <td>同一域名下的不同端口</td>
+        <td>是</td>
+    </tr>
+    <tr>
+        <td><p>www.a.com/a</p><p>api.a.com/a</p></td>
+        <td>子域不同</td>
+        <td>是</td>
+    </tr>
+    <tr>
+        <td><p>www.a.com/a</p><p>www.b.com/a</p></td>
+        <td>不同域名</td>
+        <td>是</td>
+    </tr>
+</table>
+
+<hr />
+
+<h1 id="一-cors相关">一、CORS相关</h1>
+
+<p>当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从
+    <a href="http://www.a.com">http://www.a.com</a>
+尝试去访问
+    www.b.com
+下的资源时，</p>
+
+<pre><code>Origin:http://www.a.com
+</code></pre>
+
+<p>将会附加在发往www.b.com的请求头上</p>
+
+<p>当服务端接受到这个OPTIONS请求时，会有三种处理方式：</p>
+
+<p>1、不允许进行跨域资源请求</p>
+
+<p>2、允许所有的域进行资源访问，即在响应头上加入：</p>
+
+<pre><code>Access-Control-Allow-Origin: *
+</code></pre>
+
+<p>如果这样做，处于安全性的考虑，响应头上将不能携带cookie，所以一般的情况应该是这样：</p>
+
+<p>3、在响应头上声明可以进行访问的域：</p>
+
+<pre><code>Access-Control-Allow-Origin: http://www.a.com
+</code></pre>
+
+<p>这样，www.a.com就可以请求到www.b.com的资源。</p>
+
+<p>除此之外，与CORS相关的请求头信息还有：</p>
+
+<pre><code>Access-Control-Request-Method
+</code></pre>
+
+<p>这个请求头的作用在于指定接下来的跨域请求中的方法。</p>
+
+<pre><code>Access-Control-Request-Header
+</code></pre>
+
+<p>这个是指定跨域请求时所携带的自定义头信息。</p>
+
+<p>与CORS相关的响应体信息还有：</p>
+
+<pre><code>Access-Control-Allow-Methods
+</code></pre>
+
+<p>这个响应头的作用在于指定在接下来的真正的请求中被允许的方法（Method），比如在这里设置为&rdquo;POST&rdquo;，如果接下来的请求是PUT方法，那么将会失败。</p>
+
+<pre><code>Access-Control-Allow-Headers
+</code></pre>
+
+<p>这个是指请求中所允许携带的请求头信息。</p>
+
+<pre><code>Access-Control-Max-Age
+</code></pre>
+
+<p>可以指定缓存时间，避免浏览器频繁发送OPTIONS请求。</p>
+
+<pre><code>Access-Control-Allow-Credentials
+</code></pre>
+
+<p>这个响应头用来表明服务端是否支持用户凭证，比如Cookie、HTTP-Authentication、证书等。如果需要，则设置此值为true。</p>
+
+<h1 id="二-spring-mvc-中的应用">二、Spring MVC 中的应用</h1>
+
+<p>在实际Spring MVC + Shiro 项目中，由于进行前后端分离改造不可避免的要遇到跨域问题。</p>
+
+<p>首先，先要解决的是Spring MVC对OPTIONS请求拦截的问题。在Spring MVC servlet配置中，添加</p>
+
+<pre><code>&lt;init-param&gt;
+    &lt;param-name&gt;dispatchOptionsRequest&lt;/param-name&gt;
+    &lt;param-value&gt;true&lt;/param-value&gt;
+&lt;/init-param&gt;
+</code></pre>
+
+<p>允许DispatcherServlet分发器分发Options请求。</p>
+
+<p>在配置bean时，需要注意的是shiro也是会拦截OPTIONS请求的。由于OPTIONS请求中没有携带任何cookie信息，shiro直接会认为该请求没有权限进而拦截在外。所以，在shiro中要自定义一个filter，用于排除OPTIONS请求。</p>
+
+<pre><code>public class CorsUserAuthenticationFilter extends UserFilter {
+    /**
+     * 不过滤OPTIONS方法
+     */
+    @Override
+    protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
+        HttpServletRequest httpRequest = WebUtils.toHttp(request);
+        if (&quot;OPTIONS&quot;.equalsIgnoreCase(httpRequest.getMethod())) {
+            return true;
+        }
+
+        return super.isAccessAllowed(request, response, mappedValue);
+    }
+}
+</code></pre>
+
+<p>在这里继承了shiro自带的UserFilter，并重写isAccessAllowed函数，如果请求的Method为OPTIONS时，返回true，表示不过滤。</p>
+
+<p>经过上述两步，OPTIONS请求我们就可以在程序中真正拿到并且可以控制其响应头参数，达到想要的目的。</p>
+
+<p>一开始在项目中使用比较原始的方法，在复杂请求的同名接口上新增一个OPTIONS请求处理：</p>
+
+<pre><code>@RequestMapping(value = &quot;&quot;, method = RequestMethod.OPTIONS)
+public HttpEntity optionsHandle(AppUser appUser, HttpServletRequest request,
+        HttpServletResponse response) {
+    MultiValueMap&lt;String, String&gt; map = new LinkedMultiValueMap&lt;String, String&gt;();
+    String origin = request.getHeader(&quot;Origin&quot;);
+    map.add(&quot;Access-Control-Allow-Credentials&quot;, &quot;true&quot;);
+    map.add(&quot;Access-Control-Allow-Origin&quot;, origin);
+    map.add(&quot;Access-Control-Allow-Methods&quot;, &quot;POST,GET,OPTIONS,DELETE,PUT,OPTIONS&quot;);
+    map.add(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Requested-With,Content-Type,Accept&quot;);
+    HttpEntity he = new HttpEntity(map);
+    return he;
+}
+</code></pre>
+
+<p>要注意的是@RequestMapping中的value要和复杂请求的value一致，即要保证他们俩的URL是一致的。在这边我只是为了方便调试才将请求的Origin直接放入
+    Access-Control-Allow-Origin
+中。在部署的时候，如果为了安全性考虑，可以将这个值写死，指定特定的域名才能跨域请求资源。</p>
+
+<p>当时测试通过后在考虑到项目中这么多接口，是否应该换一种方式进行处理更为妥当。考虑之后决定采用拦截器的方式实现。</p>
+
+<p>在Spring mvc的xml中添加：</p>
+
+<pre><code>&lt;mvc:interceptors&gt;
+    &lt;mvc:interceptor&gt;
+        &lt;mvc:mapping path=&quot;/**&quot; /&gt;
+        &lt;bean class=&quot;xxx.interceptor.CorsRequestInterceptor&quot; /&gt;
+    &lt;/mvc:interceptor&gt;
+&lt;/mvc:interceptors&gt;
+</code></pre>
+
+<p>这里配置了一个全地址匹配的拦截器，拦截器的实现如下：</p>
+
+<pre><code>public class CorsRequestInterceptor implements HandlerInterceptor {
+
+    String origin = &quot;&quot;;
+
+    @Override
+    public void afterCompletion(HttpServletRequest arg0,
+            HttpServletResponse arg1, Object arg2, Exception arg3)
+            throws Exception {
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest arg0, HttpServletResponse response,
+            Object arg2, ModelAndView arg3) throws Exception {
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
+            Object arg2) throws Exception {
+        origin = request.getHeader(&quot;Origin&quot;);
+        response.addHeader(&quot;Access-Control-Allow-Credentials&quot;,&quot;true&quot;);
+        response.addHeader(&quot;Access-Control-Allow-Origin&quot;, origin);
+        response.addHeader(&quot;Access-Control-Allow-Methods&quot;, &quot;POST,GET,DELETE,PUT,OPTIONS&quot;);
+        response.addHeader(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Requested-With,Content-Type,Accept&quot;);
+        return true;
+    }
+}
+</code></pre>
+
+<p>这样，可以在所有的响应中都加上跨域信息。</p>
+
+<p>对于OPTIONS方法的处理，通过一个匹配全地址的Controller进行处理：</p>
+
+<pre><code>@Controller
+public class OptionsMethodController {
+    @RequestMapping(value = {&quot;/**&quot;}, method = RequestMethod.OPTIONS)
+    public void saveOptions(HttpServletRequest resquest,HttpServletResponse response) {
+        response.setStatus(200);
+    }
+}
+</code></pre>
+
+<p>通过以上配置，就可以实现全接口的跨域处理。</p>
+
+<p>Ps：在Spring MVC 4.2以上版本中还可以通过以下方式实现：</p>
+
+<pre><code>@Configuration
+public class MigratedConfiguration {
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurerAdapter() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping(&quot;/**&quot;).allowedOrigins(&quot;http://www.a.com&quot;);
+            }
+        };
+    }
+}
+</code></pre>
+
+	</div>
+  <footer class="article-footer clearfix">
+  
+
+<div class="article-tags">
+  <span></span>
+  
+  <a href="http://piscesilent.github.io/tags/web">Web</a>
+  
+  <a href="http://piscesilent.github.io/tags/java">Java</a>
+  
+</div>
+
+
+
+
+
+  <div class="article-share" id="share">
+    <div data-url="http://piscesilent.github.io/post/CORS/" data-title="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" data-tsina="1" class="share clearfix">
+    </div>
+  </div>
+</footer>
+
+	</article>
+  
+
+
+<section class="comment">
+<div id="disqus_thread"></div>
+</section>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://piscesilent.github.io/post/CORS/";
+this.page.identifier = "http://piscesilent.github.io/post/CORS/";
+};
+(function() { 
+var d = document, s = d.createElement('script');
+
+s.src = '//SilenT.disqus.com/embed.js';
+
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+</div>
+
+    <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
+<div id="asidepart">
+<div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
+<aside class="clearfix">
+  
+
+
+
+  
+
+<div class="tagslist">
+	<p class="asidetitle">标签</p>
+		<ul class="clearfix">
+      
+			<li><a href="http://piscesilent.github.io/tags/elasticsearch" title="elasticsearch">elasticsearch<sup>1</sup></a></li>
+      
+			<li><a href="http://piscesilent.github.io/tags/java" title="java">java<sup>3</sup></a></li>
+      
+			<li><a href="http://piscesilent.github.io/tags/web" title="web">web<sup>1</sup></a></li>
+      
+		</ul>
+</div>
+
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle">归档</p>
+    <ul class="archive-list">
+      
+      
+      <li class="archive-list-item">
+        <a class="archive-list-link" href="http://piscesilent.github.io/post/#2016-07">2016年07月</a><span class="archive-list-count">1</span>
+      </li>
+      
+      
+      <li class="archive-list-item">
+        <a class="archive-list-link" href="http://piscesilent.github.io/post/#2016-05">2016年05月</a><span class="archive-list-count">2</span>
+      </li>
+      
+    </ul>
+
+  </div>
+
+
+  
+
+<div class="tagcloudlist">
+  <p class="asidetitle">标签云</p>
+  <div class="tagcloudlist clearfix">
+    
+    <a href="http://piscesilent.github.io/tags/elasticsearch" style="font-size: 12px;">elasticsearch</a>
+    
+    <a href="http://piscesilent.github.io/tags/java" style="font-size: 12px;">java</a>
+    
+    <a href="http://piscesilent.github.io/tags/web" style="font-size: 12px;">web</a>
+    
+  </div>
+</div>
+
+
+
+  
+
+</aside>
+</div>
+
+  </div>
+  <footer><div id="footer" >
+  
+  <div class="line">
+    <span></span>
+    <div style='background:no-repeat url("http://piscesilent.github.io/img/author.jpg") left top;-webkit-background-size:6.875em 6.875em;-moz-background-size:6.875em 6.875em;background-size:6.875em 6.875em;' class="author" ></div>
+  </div>
+  
+  
+  <section class="info">
+    <p>仗剑走天涯</p>
+  </section>
+  
+  <div class="social-font clearfix">
+    
+    
+    
+    <a href="https://github.com/Piscesilent" target="_blank" title="github"></a>
+    
+    
+    
+  </div>
+  <p class="copyright">Powered by <a href="http://gohugo.io" target="_blank" title="hugo">hugo</a> and Theme by <a href="https://github.com/coderzh/hugo-pacman-theme" target="_blank" title="hugo-pacman-theme">hugo-pacman-theme</a> © 2016
+    
+    <a href="http://piscesilent.github.io/" target="_blank" title="SilenT">SilenT</a>
+    
+  </p>
+</div>
+</footer>
+  <script src="http://piscesilent.github.io/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+done = false;
+$(document).ready(function(){
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      o = $('.openaside');
+  $(window).resize(function(){
+    getSize();
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      o.css('display', 'none');
+    }
+  });
+  c.click(function(){
+    a.addClass('fadeOut').css('display', 'none');
+    o.css('display', 'block').addClass('fadeIn');
+    m.addClass('moveMain');
+  });
+  o.click(function(){
+    o.css('display', 'none').removeClass('beforeFadeIn');
+    a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');
+    m.removeClass('moveMain');
+  });
+  $(window).scroll(function(){
+    o.css("top",Math.max(80,260-$(this).scrollTop()));
+  });
+  $('form.search').on('submit', function (event) {
+    if (false === done) {
+      event.preventDefault();
+      var orgVal = $(this).find('#search').val();
+      $(this).find('#search').val('site:http:\/\/piscesilent.github.io\/ ' + orgVal);
+      done = true;
+      $(this).submit();
+    }
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+    c.click(function(){
+      ta.css('display', 'block').addClass('fadeIn');
+    });
+    o.click(function(){
+      ta.css('display', 'none');
+    });
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,320-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});
+</script>
+
+
+<link rel="stylesheet" href="http://piscesilent.github.io/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="http://piscesilent.github.io/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+});
+</script>
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', '', 'auto');
+  ga('send', 'pageview');
+  $('#messagesbsb').remove();
+</script>
+
+
+
+</body>
+</html>

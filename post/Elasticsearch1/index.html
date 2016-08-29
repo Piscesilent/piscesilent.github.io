@@ -2,18 +2,17 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>404 Page not found - SilenT&#39;s Blog</title>
+  <title>Elasticsearch 简单入门（一） - SilenT&#39;s Blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
-  
-  <meta name="description" content="404 Page not found">
+  <meta name="keywords" content="Elasticsearch,">
+  <meta name="description" content="Elasticsearch 简单入门 -- You Know, for Search">
   <meta name="author" content="SilenT">
-  <meta itemprop="name" content="404 Page not found - SilenT&#39;s Blog">
-  <meta itemprop="description" content="404 Page not found">
+  <meta itemprop="name" content="Elasticsearch 简单入门（一） - SilenT&#39;s Blog">
+  <meta itemprop="description" content="Elasticsearch 简单入门 -- You Know, for Search">
   <meta itemprop="image" content="http://piscesilent.github.io/img/author.jpg">
   
+  <meta name="twitter:description" content="Elasticsearch 简单入门 -- You Know, for Search" />
   
-  <meta name="twitter:description" content="">
-  <link rel="alternate" href="http://piscesilent.github.io/feed.xml" title="SilenT&#39;s Blog" type="application/rss+xml"/>
   <link rel="shortcut icon" href="http://piscesilent.github.io/img/favicon.ico"/>
   <link rel="apple-touch-icon" href="http://piscesilent.github.io/apple-touch-icon.png" />
   <link rel="apple-touch-icon-precomposed" href="http://piscesilent.github.io/apple-touch-icon.png" />
@@ -57,11 +56,193 @@
 
   </header>
   <div id="container">
-    <div id="main">
-      
-      你访问的页面不存在
-      
+    <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody">
+    <header class="article-info clearfix">
+  <h1 itemprop="name">
+      <a href="http://piscesilent.github.io/post/Elasticsearch1/" title="Elasticsearch 简单入门（一）" itemprop="url">Elasticsearch 简单入门（一）</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="http://Piscesilent.github.io/" title="SilenT">SilenT</a>
+    
+  </p>
+  <p class="article-time">
+    <time datetime="2016-05-24 19:49:42 &#43;0800 CST" itemprop="datePublished">2016年05月24日</time>
+  </p>
+</header>
+
+	<div class="article-content">
+    
+    
+
+<h1 id="you-know-for-search">You Know, for Search</h1>
+
+<p>Elasticsearch是一个实时的分布式搜索和分析引擎。它可以用于全文搜索，结构化搜索以及分析。</p>
+
+<p>它是一个基于Lucene的搜索服务器。它提供了一个分布式多用户能力的全文搜索引擎，基于RESTful web接口设计。</p>
+
+<p>Elasticsearch是面向文档(document oriented)的，这意味着它可以存储整个对象或文档(document)。</p>
+
+<p>Elasticsearch集群可以包含多个索引(indices)（数据库），每一个索引可以包含多个类型(types)（表），每一个类型包含多个文档(documents)（行），然后每个文档包含多个字段(Fields)（列）。</p>
+
+<p>其对应关系如下表：</p>
+
+<table>
+    <tr>
+        <td>MySQL</td>
+        <td>Databases</td>
+        <td>Tables</td>
+        <td>Rows</td>
+        <td>Colums</td>
+    </tr>
+    <tr>
+        <td>Elasticsearch</td>
+        <td>Indices</td>
+        <td>Types</td>
+        <td>Documents</td>
+        <td>Fields</td>
+    </tr>
+</table>
+
+<p>简单部署：</p>
+
+<p>1、在以下地址中</p>
+
+<blockquote>
+<p><a href="https://www.elastic.co/downloads/elasticsearch">https://www.elastic.co/downloads/elasticsearch</a></p>
+</blockquote>
+
+<p>下载最新的Es，Unzip</p>
+
+<p>2、</p>
+
+<p>执行：</p>
+
+<pre><code>sh ./bin/elasticsearch
+</code></pre>
+
+<p>默认RESTful API端口为9200,默认JAVA API端口为9300。</p>
+
+<p>3、在控制台中输入：</p>
+
+<pre><code>curl -XGET &quot;http://127.0.0.1:9200/&quot;
+</code></pre>
+
+<p>输出：</p>
+
+<pre><code>{
+  &quot;name&quot;: &quot;Alibar&quot;,
+  &quot;cluster_name&quot;: &quot;elasticsearch&quot;,
+  &quot;version&quot;: {
+    &quot;number&quot;: &quot;2.2.0&quot;,
+    &quot;build_hash&quot;: &quot;8ff36d139e16f8720f2947ef62c8167a888992fe&quot;,
+    &quot;build_timestamp&quot;: &quot;2016-01-27T13:32:39Z&quot;,
+    &quot;build_snapshot&quot;: false,
+    &quot;lucene_version&quot;: &quot;5.4.1&quot;
+  },
+  &quot;tagline&quot;: &quot;You Know, for Search&quot;
+}
+</code></pre>
+
+<p>BINGO</p>
+
+<p>elasticsearch 单机环境就已经配置成功了。</p>
+
+<p>Ps：关于</p>
+
+<pre><code>./config/elasticsearch.yml
+</code></pre>
+
+<p>的简单配置说明：</p>
+
+<p>1、</p>
+
+<pre><code>cluster.name
+</code></pre>
+
+<p>集群名，默认是elasticsearch，用于区分在同一网段下的不同elasticsearch集群。</p>
+
+<p>2、</p>
+
+<pre><code>network.bind_host
+</code></pre>
+
+<p>绑定的ip地址，默认为0.0.0.0</p>
+
+<p>3、</p>
+
+<pre><code>network.publish_host
+</code></pre>
+
+<p>节点发现地址，一般配置成内网地址，用于节点间的互相发现、通讯</p>
+
+<p>4、</p>
+
+<pre><code>network.host
+</code></pre>
+
+<p>用于同时设置</p>
+
+<pre><code>network.bind_host
+</code></pre>
+
+<p>和</p>
+
+<pre><code>network.publish_host
+</code></pre>
+
+	</div>
+  <footer class="article-footer clearfix">
+  
+
+<div class="article-tags">
+  <span></span>
+  
+  <a href="http://piscesilent.github.io/tags/elasticsearch">Elasticsearch</a>
+  
+  <a href="http://piscesilent.github.io/tags/java">Java</a>
+  
+</div>
+
+
+
+
+
+  <div class="article-share" id="share">
+    <div data-url="http://piscesilent.github.io/post/Elasticsearch1/" data-title="Elasticsearch 简单入门（一）" data-tsina="1" class="share clearfix">
     </div>
+  </div>
+</footer>
+
+	</article>
+  
+
+
+<section class="comment">
+<div id="disqus_thread"></div>
+</section>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://piscesilent.github.io/post/Elasticsearch1/";
+this.page.identifier = "http://piscesilent.github.io/post/Elasticsearch1/";
+};
+(function() { 
+var d = document, s = d.createElement('script');
+
+s.src = '//SilenT.disqus.com/embed.js';
+
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+</div>
+
     <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
 <div id="asidepart">
 <div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
@@ -125,10 +306,6 @@
 
 
   
-<div class="rsspart">
-  <a rel="nofollow" href="http://piscesilent.github.io/feed.xml" type="application/rss+xml" target="_blank">RSS 订阅</a>
-</div>
-
 
 </aside>
 </div>
@@ -219,6 +396,38 @@ $(document).ready(function(){
 
 <script type="text/javascript">
 $(document).ready(function(){
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+    c.click(function(){
+      ta.css('display', 'block').addClass('fadeIn');
+    });
+    o.click(function(){
+      ta.css('display', 'none');
+    });
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,320-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){
   var $this = $('.share'),
       url = $this.attr('data-url'),
       encodedUrl = encodeURIComponent(url),
@@ -245,6 +454,27 @@ $(document).ready(function(){
 });
 </script>
 
+
+<link rel="stylesheet" href="http://piscesilent.github.io/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="http://piscesilent.github.io/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+});
+</script>
 
 
 <script>
