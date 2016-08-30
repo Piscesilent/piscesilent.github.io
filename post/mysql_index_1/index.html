@@ -2,16 +2,16 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用 - SilenT&#39;s Blog</title>
+  <title>MySQL索引优化总结（一） - SilenT&#39;s Blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
-  <meta name="keywords" content="跨域,CORS,Spring MVC,Shiro,">
-  <meta name="description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用">
+  <meta name="keywords" content="MySQL,Explain,">
+  <meta name="description" content="MySQL索引优化">
   <meta name="author" content="SilenT">
-  <meta itemprop="name" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用 - SilenT&#39;s Blog">
-  <meta itemprop="description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用">
+  <meta itemprop="name" content="MySQL索引优化总结（一） - SilenT&#39;s Blog">
+  <meta itemprop="description" content="MySQL索引优化">
   <meta itemprop="image" content="http://piscesilent.github.io/img/author.jpg">
   
-  <meta name="twitter:description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" />
+  <meta name="twitter:description" content="MySQL索引优化" />
   
   <link rel="shortcut icon" href="http://piscesilent.github.io/img/favicon.ico"/>
   <link rel="apple-touch-icon" href="http://piscesilent.github.io/apple-touch-icon.png" />
@@ -58,7 +58,7 @@
 	<article itemprop="articleBody">
     <header class="article-info clearfix">
   <h1 itemprop="name">
-      <a href="http://piscesilent.github.io/post/CORS/" title="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" itemprop="url">跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用</a>
+      <a href="http://piscesilent.github.io/post/mysql_index_1/" title="MySQL索引优化总结（一）" itemprop="url">MySQL索引优化总结（一）</a>
   </h1>
   <p class="article-author">By
     
@@ -66,7 +66,7 @@
     
   </p>
   <p class="article-time">
-    <time datetime="2016-07-05 09:07:42 &#43;0800 CST" itemprop="datePublished">2016年07月05日</time>
+    <time datetime="2016-08-30 11:53:21 &#43;0800 CST" itemprop="datePublished">2016年08月30日</time>
   </p>
 </header>
 
@@ -74,241 +74,148 @@
     
     
 
-<p>CORS，即跨域资源共享（Cross-Origin Resource Sharing）
-跨站HTTP请求是指发起请求的资源所在域不同于该请求所指向资源所在的域的HTTP请求。</p>
+<h1 id="explain命令">Explain命令</h1>
 
-<p>CORS旨在定义一种规范让浏览器在接收到从提供者获取的资源时能够正决定是否应该将此资源分发给消费者作进一步处理。CROS利用资源提供者的显式授权来决定目标资源是否应该与消费者共享。</p>
+<p>explain用于获取查询相关的执行计划信息，在这个命令中可以知晓查询是如何执行的。</p>
 
-<p>JavaScript出于安全方面的考虑，不允许跨域调用其他页面的对象，其同源策略说明如下：</p>
+<p>使用explain也很简单，只需要在所需分析的语句前加上explain执行即可。其输出结果如下：</p>
 
-<table>
-    <tr>
-        <th>链接</th>
-        <th>说明</th>
-        <th>是否跨域</th>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>www.a.com/a</p></td>
-        <td>同一域名</td>
-        <td>否</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>www.a.com/b</p></td>
-        <td>同一域名下的不同目录</td>
-        <td>否</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com:8080/a</p><p>www.a.com:8081/a</p></td>
-        <td>同一域名下的不同端口</td>
-        <td>是</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>api.a.com/a</p></td>
-        <td>子域不同</td>
-        <td>是</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>www.b.com/a</p></td>
-        <td>不同域名</td>
-        <td>是</td>
-    </tr>
-</table>
-
-<hr />
-
-<h1 id="一-cors相关">一、CORS相关</h1>
-
-<p>当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从
-    <a href="http://www.a.com">http://www.a.com</a>
-尝试去访问
-    www.b.com
-下的资源时，</p>
-
-<pre><code>Origin:http://www.a.com
+<pre><code>******** 1. row ********
+           id: 1
+  select_type: SIMPLE
+        table: cms_article
+         type: ref
+possible_keys: INDEX_CREATE
+          key: INDEX_CREATE
+      key_len: 259
+          ref: const
+         rows: 1
+        Extra: Using index condition
 </code></pre>
 
-<p>将会附加在发往www.b.com的请求头上</p>
+<h2 id="id">id</h2>
 
-<p>当服务端接受到这个OPTIONS请求时，会有三种处理方式：</p>
+<p>这一列用于标识查询编号，如果没有子查询，那么每个索引都会标识为1。</p>
 
-<p>1、不允许进行跨域资源请求</p>
+<h2 id="select-type">select_type</h2>
 
-<p>2、允许所有的域进行资源访问，即在响应头上加入：</p>
+<p>这行标识了SELECT的类型，即简单查询还是复杂查询</p>
 
-<pre><code>Access-Control-Allow-Origin: *
+<p>SIMPLE：查询中不包含子查询和UNION查询，即简单查询</p>
+
+<p>对于复杂查询</p>
+
+<pre><code>explain select v.id from (select id from cms_article where create_by = '1') v \G;
 </code></pre>
 
-<p>如果这样做，处于安全性的考虑，响应头上将不能携带cookie，所以一般的情况应该是这样：</p>
+<p>explain后会出现多行数据</p>
 
-<p>3、在响应头上声明可以进行访问的域：</p>
-
-<pre><code>Access-Control-Allow-Origin: http://www.a.com
+<pre><code>************ 1. row ***********
+           id: 1
+  select_type: PRIMARY
+        table: &lt;derived2&gt;
+         type: ALL
+possible_keys: NULL
+          key: NULL
+      key_len: NULL
+          ref: NULL
+         rows: 2
+        Extra: NULL
+************ 2. row ************
+           id: 2
+  select_type: DERIVED
+        table: cms_article
+         type: ref
+possible_keys: INDEX_CREATE
+          key: INDEX_CREATE
+      key_len: 259
+          ref: const
+         rows: 1
+        Extra: Using where; Using index
 </code></pre>
 
-<p>这样，www.a.com就可以请求到www.b.com的资源。</p>
+<p>最外一层总是PRIMARY。</p>
 
-<p>除此之外，与CORS相关的请求头信息还有：</p>
+<p>PRIMARY：表示复杂查询的最外层</p>
 
-<pre><code>Access-Control-Request-Method
-</code></pre>
+<p>DERIVED：用于表示包含在FROM子句中的子查询</p>
 
-<p>这个请求头的作用在于指定接下来的跨域请求中的方法。</p>
+<p>UNION：UNION中的第二个或后面的SELECT语句</p>
 
-<pre><code>Access-Control-Request-Header
-</code></pre>
+<p>SUBQUERY：子查询中的SELECT（不在FROM子句中）</p>
 
-<p>这个是指定跨域请求时所携带的自定义头信息。</p>
+<h2 id="table">table</h2>
 
-<p>与CORS相关的响应体信息还有：</p>
+<p>用于标识查询对应的表，结合id可以看出查询的关联顺序</p>
 
-<pre><code>Access-Control-Allow-Methods
-</code></pre>
+<h2 id="type">type</h2>
 
-<p>这个响应头的作用在于指定在接下来的真正的请求中被允许的方法（Method），比如在这里设置为&rdquo;POST&rdquo;，如果接下来的请求是PUT方法，那么将会失败。</p>
+<p>这个属性决定了MySQL如何查找表中的行，也是索引优化的中应该关注的最重要的属性。从差到优，依次为：</p>
 
-<pre><code>Access-Control-Allow-Headers
-</code></pre>
+<h3 id="all">all</h3>
 
-<p>这个是指请求中所允许携带的请求头信息。</p>
+<p>代表全表扫描，通常是最差的情况</p>
 
-<pre><code>Access-Control-Max-Age
-</code></pre>
+<h3 id="index">index</h3>
 
-<p>可以指定缓存时间，避免浏览器频繁发送OPTIONS请求。</p>
+<p>按索引次序读取表中数据，最差的情况是按索引的次序读取整个表的数据，这样读取的开销会相当大，因为此时是按照随机的次序去取表中的数据，甚至于比全表扫描效率还低。</p>
 
-<pre><code>Access-Control-Allow-Credentials
-</code></pre>
+<h3 id="range">range</h3>
 
-<p>这个响应头用来表明服务端是否支持用户凭证，比如Cookie、HTTP-Authentication、证书等。如果需要，则设置此值为true。</p>
+<p>范围扫描，即有限制的INDEX扫描，通常是带有范围搜索条件时出现。</p>
 
-<h1 id="二-spring-mvc-中的应用">二、Spring MVC 中的应用</h1>
+<p>在通常情况下，优化器会在索引存在的情况下，通过符合 RANGE 范围的条数和总数的比例来选择是使用索引还是进行全表遍历。当需要读取的数据超过一个临界值时，优化器会放弃从索引中读取而改为进行全表扫描，这是为了避免过多的 random disk。</p>
 
-<p>在实际Spring MVC + Shiro 项目中，由于进行前后端分离改造不可避免的要遇到跨域问题。</p>
+<p>所以有时候会看到使用范围查询时，即使在该字段上建有索引，其type却是ALL的原因。</p>
 
-<p>首先，先要解决的是Spring MVC对OPTIONS请求拦截的问题。在Spring MVC servlet配置中，添加</p>
+<h3 id="ref">ref</h3>
 
-<pre><code>&lt;init-param&gt;
-    &lt;param-name&gt;dispatchOptionsRequest&lt;/param-name&gt;
-    &lt;param-value&gt;true&lt;/param-value&gt;
-&lt;/init-param&gt;
-</code></pre>
+<p>索引查找，返回的是所有匹配某个单值的行，一般而言在优化得当的SQL查询中，其访问方式多为ref。</p>
 
-<p>允许DispatcherServlet分发器分发Options请求。</p>
+<h3 id="eq-ref">eq_ref</h3>
 
-<p>在配置bean时，需要注意的是shiro也是会拦截OPTIONS请求的。由于OPTIONS请求中没有携带任何cookie信息，shiro直接会认为该请求没有权限进而拦截在外。所以，在shiro中要自定义一个filter，用于排除OPTIONS请求。</p>
+<p>和ref类似，只有使用唯一索引或使用主键查找才会出现，其效率比ref更高。</p>
 
-<pre><code>public class CorsUserAuthenticationFilter extends UserFilter {
-    /**
-     * 不过滤OPTIONS方法
-     */
-    @Override
-    protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
-        HttpServletRequest httpRequest = WebUtils.toHttp(request);
-        if (&quot;OPTIONS&quot;.equalsIgnoreCase(httpRequest.getMethod())) {
-            return true;
-        }
+<h3 id="const-system">const, system</h3>
 
-        return super.isAccessAllowed(request, response, mappedValue);
-    }
-}
-</code></pre>
+<p>说明MySQL能将查询转换为常量</p>
 
-<p>在这里继承了shiro自带的UserFilter，并重写isAccessAllowed函数，如果请求的Method为OPTIONS时，返回true，表示不过滤。</p>
+<h3 id="null">NULL</h3>
 
-<p>经过上述两步，OPTIONS请求我们就可以在程序中真正拿到并且可以控制其响应头参数，达到想要的目的。</p>
+<p>MySQL能在优化阶段分解查询语句，执行阶段甚至不用再访问表或索引。</p>
 
-<p>一开始在项目中使用比较原始的方法，在复杂请求的同名接口上新增一个OPTIONS请求处理：</p>
+<h2 id="possible-keys">possible_keys</h2>
 
-<pre><code>@RequestMapping(value = &quot;&quot;, method = RequestMethod.OPTIONS)
-public HttpEntity optionsHandle(AppUser appUser, HttpServletRequest request,
-        HttpServletResponse response) {
-    MultiValueMap&lt;String, String&gt; map = new LinkedMultiValueMap&lt;String, String&gt;();
-    String origin = request.getHeader(&quot;Origin&quot;);
-    map.add(&quot;Access-Control-Allow-Credentials&quot;, &quot;true&quot;);
-    map.add(&quot;Access-Control-Allow-Origin&quot;, origin);
-    map.add(&quot;Access-Control-Allow-Methods&quot;, &quot;POST,GET,OPTIONS,DELETE,PUT,OPTIONS&quot;);
-    map.add(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Requested-With,Content-Type,Accept&quot;);
-    HttpEntity he = new HttpEntity(map);
-    return he;
-}
-</code></pre>
+<p>指出本次查询可以使用哪些索引，这一列是在优化过程早期创建的，有些索引对于后续的优化过程是没用的。</p>
 
-<p>要注意的是@RequestMapping中的value要和复杂请求的value一致，即要保证他们俩的URL是一致的。在这边我只是为了方便调试才将请求的Origin直接放入
-    Access-Control-Allow-Origin
-中。在部署的时候，如果为了安全性考虑，可以将这个值写死，指定特定的域名才能跨域请求资源。</p>
+<h2 id="key">key</h2>
 
-<p>当时测试通过后在考虑到项目中这么多接口，是否应该换一种方式进行处理更为妥当。考虑之后决定采用拦截器的方式实现。</p>
+<p>显示MySQL实际决定使用的索引。如果没有选择索引，键是NULL。</p>
 
-<p>在Spring mvc的xml中添加：</p>
+<h2 id="key-len">key_len</h2>
 
-<pre><code>&lt;mvc:interceptors&gt;
-    &lt;mvc:interceptor&gt;
-        &lt;mvc:mapping path=&quot;/**&quot; /&gt;
-        &lt;bean class=&quot;xxx.interceptor.CorsRequestInterceptor&quot; /&gt;
-    &lt;/mvc:interceptor&gt;
-&lt;/mvc:interceptors&gt;
-</code></pre>
+<p>显示了MySQL在索引里使用的字节数。</p>
 
-<p>这里配置了一个全地址匹配的拦截器，拦截器的实现如下：</p>
+<h2 id="ref-1">ref</h2>
 
-<pre><code>public class CorsRequestInterceptor implements HandlerInterceptor {
+<p>显示使用哪个列（或常数）与key一起从表中选择行。</p>
 
-    String origin = &quot;&quot;;
+<h2 id="rows">rows</h2>
 
-    @Override
-    public void afterCompletion(HttpServletRequest arg0,
-            HttpServletResponse arg1, Object arg2, Exception arg3)
-            throws Exception {
-    }
+<p>MySQL估计为了找到所需的行而要读取的行数。这个值虽然不是最终要从表里读取数据的行数，但是也能反映出索引对查询条件的覆盖率。</p>
 
-    @Override
-    public void postHandle(HttpServletRequest arg0, HttpServletResponse response,
-            Object arg2, ModelAndView arg3) throws Exception {
-    }
+<h2 id="extra">Extra</h2>
 
-    @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
-            Object arg2) throws Exception {
-        origin = request.getHeader(&quot;Origin&quot;);
-        response.addHeader(&quot;Access-Control-Allow-Credentials&quot;,&quot;true&quot;);
-        response.addHeader(&quot;Access-Control-Allow-Origin&quot;, origin);
-        response.addHeader(&quot;Access-Control-Allow-Methods&quot;, &quot;POST,GET,DELETE,PUT,OPTIONS&quot;);
-        response.addHeader(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Requested-With,Content-Type,Accept&quot;);
-        return true;
-    }
-}
-</code></pre>
+<p>这里显示了一些重要的额外信息，对于索引优化工作，首先需要关注以下几个额外信息：</p>
 
-<p>这样，可以在所有的响应中都加上跨域信息。</p>
+<h3 id="using-index">Using index</h3>
 
-<p>对于OPTIONS方法的处理，通过一个匹配全地址的Controller进行处理：</p>
+<p>当在Extra列中显示这个信息时，这表明此次查询没有访问表，因为在索引中已经有足够的数据。所以，可以把这个当作&rdquo;Using index only&rdquo;。这里有一点需要注意的是，当使用聚集索引时（通常是主键的默认索引），尽管查询只扫描了索引，但在Extra中并不会显示&rdquo;Using index&rdquo;。</p>
 
-<pre><code>@Controller
-public class OptionsMethodController {
-    @RequestMapping(value = {&quot;/**&quot;}, method = RequestMethod.OPTIONS)
-    public void saveOptions(HttpServletRequest resquest,HttpServletResponse response) {
-        response.setStatus(200);
-    }
-}
-</code></pre>
+<h3 id="using-index-condition">Using index condition</h3>
 
-<p>通过以上配置，就可以实现全接口的跨域处理。</p>
-
-<p>Ps：在Spring MVC 4.2以上版本中还可以通过以下方式实现：</p>
-
-<pre><code>@Configuration
-public class MigratedConfiguration {
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurerAdapter() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping(&quot;/**&quot;).allowedOrigins(&quot;http://www.a.com&quot;);
-            }
-        };
-    }
-}
-</code></pre>
+<p>当出现这个信息时表明，本次查询首先会访问索引进行搜索过滤，然后从索引中得到结果后再进行回表查询。这里使用了push down技术，具体可以参考官方文档：
+<a href="https://dev.mysql.com/doc/refman/5.6/en/index-condition-pushdown-optimization.html">https://dev.mysql.com/doc/refman/5.6/en/index-condition-pushdown-optimization.html</a></p>
 
 	</div>
   <footer class="article-footer clearfix">
@@ -317,9 +224,7 @@ public class MigratedConfiguration {
 <div class="article-tags">
   <span></span>
   
-  <a href="http://piscesilent.github.io/tags/web">Web</a>
-  
-  <a href="http://piscesilent.github.io/tags/java">Java</a>
+  <a href="http://piscesilent.github.io/tags/mysql">MySQL</a>
   
 </div>
 
@@ -328,7 +233,7 @@ public class MigratedConfiguration {
 
 
   <div class="article-share" id="share">
-    <div data-url="http://piscesilent.github.io/post/CORS/" data-title="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" data-tsina="1" class="share clearfix">
+    <div data-url="http://piscesilent.github.io/post/mysql_index_1/" data-title="MySQL索引优化总结（一）" data-tsina="1" class="share clearfix">
     </div>
   </div>
 </footer>
@@ -344,8 +249,8 @@ public class MigratedConfiguration {
 
 
 var disqus_config = function () {
-this.page.url = "http://piscesilent.github.io/post/CORS/";
-this.page.identifier = "http://piscesilent.github.io/post/CORS/";
+this.page.url = "http://piscesilent.github.io/post/mysql_index_1/";
+this.page.identifier = "http://piscesilent.github.io/post/mysql_index_1/";
 };
 (function() { 
 var d = document, s = d.createElement('script');

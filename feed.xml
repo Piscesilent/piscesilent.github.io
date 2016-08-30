@@ -6,8 +6,161 @@
     <description>Recent content on SilenT&#39;s Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-CN</language>
-    <lastBuildDate>Tue, 05 Jul 2016 09:07:42 +0800</lastBuildDate>
+    <lastBuildDate>Tue, 30 Aug 2016 11:53:21 +0800</lastBuildDate>
     <atom:link href="http://Piscesilent.github.io/feed/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>MySQL索引优化总结（一）</title>
+      <link>http://piscesilent.github.io/post/mysql_index_1/</link>
+      <pubDate>Tue, 30 Aug 2016 11:53:21 +0800</pubDate>
+      
+      <guid>http://piscesilent.github.io/post/mysql_index_1/</guid>
+      <description>
+
+&lt;h1 id=&#34;explain命令&#34;&gt;Explain命令&lt;/h1&gt;
+
+&lt;p&gt;explain用于获取查询相关的执行计划信息，在这个命令中可以知晓查询是如何执行的。&lt;/p&gt;
+
+&lt;p&gt;使用explain也很简单，只需要在所需分析的语句前加上explain执行即可。其输出结果如下：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;******** 1. row ********
+           id: 1
+  select_type: SIMPLE
+        table: cms_article
+         type: ref
+possible_keys: INDEX_CREATE
+          key: INDEX_CREATE
+      key_len: 259
+          ref: const
+         rows: 1
+        Extra: Using index condition
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h2 id=&#34;id&#34;&gt;id&lt;/h2&gt;
+
+&lt;p&gt;这一列用于标识查询编号，如果没有子查询，那么每个索引都会标识为1。&lt;/p&gt;
+
+&lt;h2 id=&#34;select-type&#34;&gt;select_type&lt;/h2&gt;
+
+&lt;p&gt;这行标识了SELECT的类型，即简单查询还是复杂查询&lt;/p&gt;
+
+&lt;p&gt;SIMPLE：查询中不包含子查询和UNION查询，即简单查询&lt;/p&gt;
+
+&lt;p&gt;对于复杂查询&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;explain select v.id from (select id from cms_article where create_by = &#39;1&#39;) v \G;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;explain后会出现多行数据&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;************ 1. row ***********
+           id: 1
+  select_type: PRIMARY
+        table: &amp;lt;derived2&amp;gt;
+         type: ALL
+possible_keys: NULL
+          key: NULL
+      key_len: NULL
+          ref: NULL
+         rows: 2
+        Extra: NULL
+************ 2. row ************
+           id: 2
+  select_type: DERIVED
+        table: cms_article
+         type: ref
+possible_keys: INDEX_CREATE
+          key: INDEX_CREATE
+      key_len: 259
+          ref: const
+         rows: 1
+        Extra: Using where; Using index
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;最外一层总是PRIMARY。&lt;/p&gt;
+
+&lt;p&gt;PRIMARY：表示复杂查询的最外层&lt;/p&gt;
+
+&lt;p&gt;DERIVED：用于表示包含在FROM子句中的子查询&lt;/p&gt;
+
+&lt;p&gt;UNION：UNION中的第二个或后面的SELECT语句&lt;/p&gt;
+
+&lt;p&gt;SUBQUERY：子查询中的SELECT（不在FROM子句中）&lt;/p&gt;
+
+&lt;h2 id=&#34;table&#34;&gt;table&lt;/h2&gt;
+
+&lt;p&gt;用于标识查询对应的表，结合id可以看出查询的关联顺序&lt;/p&gt;
+
+&lt;h2 id=&#34;type&#34;&gt;type&lt;/h2&gt;
+
+&lt;p&gt;这个属性决定了MySQL如何查找表中的行，也是索引优化的中应该关注的最重要的属性。从差到优，依次为：&lt;/p&gt;
+
+&lt;h3 id=&#34;all&#34;&gt;all&lt;/h3&gt;
+
+&lt;p&gt;代表全表扫描，通常是最差的情况&lt;/p&gt;
+
+&lt;h3 id=&#34;index&#34;&gt;index&lt;/h3&gt;
+
+&lt;p&gt;按索引次序读取表中数据，最差的情况是按索引的次序读取整个表的数据，这样读取的开销会相当大，因为此时是按照随机的次序去取表中的数据，甚至于比全表扫描效率还低。&lt;/p&gt;
+
+&lt;h3 id=&#34;range&#34;&gt;range&lt;/h3&gt;
+
+&lt;p&gt;范围扫描，即有限制的INDEX扫描，通常是带有范围搜索条件时出现。&lt;/p&gt;
+
+&lt;p&gt;在通常情况下，优化器会在索引存在的情况下，通过符合 RANGE 范围的条数和总数的比例来选择是使用索引还是进行全表遍历。当需要读取的数据超过一个临界值时，优化器会放弃从索引中读取而改为进行全表扫描，这是为了避免过多的 random disk。&lt;/p&gt;
+
+&lt;p&gt;所以有时候会看到使用范围查询时，即使在该字段上建有索引，其type却是ALL的原因。&lt;/p&gt;
+
+&lt;h3 id=&#34;ref&#34;&gt;ref&lt;/h3&gt;
+
+&lt;p&gt;索引查找，返回的是所有匹配某个单值的行，一般而言在优化得当的SQL查询中，其访问方式多为ref。&lt;/p&gt;
+
+&lt;h3 id=&#34;eq-ref&#34;&gt;eq_ref&lt;/h3&gt;
+
+&lt;p&gt;和ref类似，只有使用唯一索引或使用主键查找才会出现，其效率比ref更高。&lt;/p&gt;
+
+&lt;h3 id=&#34;const-system&#34;&gt;const, system&lt;/h3&gt;
+
+&lt;p&gt;说明MySQL能将查询转换为常量&lt;/p&gt;
+
+&lt;h3 id=&#34;null&#34;&gt;NULL&lt;/h3&gt;
+
+&lt;p&gt;MySQL能在优化阶段分解查询语句，执行阶段甚至不用再访问表或索引。&lt;/p&gt;
+
+&lt;h2 id=&#34;possible-keys&#34;&gt;possible_keys&lt;/h2&gt;
+
+&lt;p&gt;指出本次查询可以使用哪些索引，这一列是在优化过程早期创建的，有些索引对于后续的优化过程是没用的。&lt;/p&gt;
+
+&lt;h2 id=&#34;key&#34;&gt;key&lt;/h2&gt;
+
+&lt;p&gt;显示MySQL实际决定使用的索引。如果没有选择索引，键是NULL。&lt;/p&gt;
+
+&lt;h2 id=&#34;key-len&#34;&gt;key_len&lt;/h2&gt;
+
+&lt;p&gt;显示了MySQL在索引里使用的字节数。&lt;/p&gt;
+
+&lt;h2 id=&#34;ref-1&#34;&gt;ref&lt;/h2&gt;
+
+&lt;p&gt;显示使用哪个列（或常数）与key一起从表中选择行。&lt;/p&gt;
+
+&lt;h2 id=&#34;rows&#34;&gt;rows&lt;/h2&gt;
+
+&lt;p&gt;MySQL估计为了找到所需的行而要读取的行数。这个值虽然不是最终要从表里读取数据的行数，但是也能反映出索引对查询条件的覆盖率。&lt;/p&gt;
+
+&lt;h2 id=&#34;extra&#34;&gt;Extra&lt;/h2&gt;
+
+&lt;p&gt;这里显示了一些重要的额外信息，对于索引优化工作，首先需要关注以下几个额外信息：&lt;/p&gt;
+
+&lt;h3 id=&#34;using-index&#34;&gt;Using index&lt;/h3&gt;
+
+&lt;p&gt;当在Extra列中显示这个信息时，这表明此次查询没有访问表，因为在索引中已经有足够的数据。所以，可以把这个当作&amp;rdquo;Using index only&amp;rdquo;。这里有一点需要注意的是，当使用聚集索引时（通常是主键的默认索引），尽管查询只扫描了索引，但在Extra中并不会显示&amp;rdquo;Using index&amp;rdquo;。&lt;/p&gt;
+
+&lt;h3 id=&#34;using-index-condition&#34;&gt;Using index condition&lt;/h3&gt;
+
+&lt;p&gt;当出现这个信息时表明，本次查询首先会访问索引进行搜索过滤，然后从索引中得到结果后再进行回表查询。这里使用了push down技术，具体可以参考官方文档：
+&lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/en/index-condition-pushdown-optimization.html&#34;&gt;https://dev.mysql.com/doc/refman/5.6/en/index-condition-pushdown-optimization.html&lt;/a&gt;&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用</title>
