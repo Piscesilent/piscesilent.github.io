@@ -2,18 +2,17 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>Posts - SilenT&#39;s Blog</title>
+  <title>MySQL索引优化总结（二） - SilenT&#39;s Blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
-  
-  <meta name="description" content="Posts">
+  <meta name="keywords" content="MySQL,">
+  <meta name="description" content="MySQL索引优化">
   <meta name="author" content="SilenT">
-  <meta itemprop="name" content="Posts - SilenT&#39;s Blog">
-  <meta itemprop="description" content="Posts">
+  <meta itemprop="name" content="MySQL索引优化总结（二） - SilenT&#39;s Blog">
+  <meta itemprop="description" content="MySQL索引优化">
   <meta itemprop="image" content="http://piscesilent.github.io/img/author.jpg">
   
+  <meta name="twitter:description" content="MySQL索引优化" />
   
-  <meta name="twitter:description" content="">
-  <link rel="alternate" href="http://piscesilent.github.io/feed.xml" title="SilenT&#39;s Blog" type="application/rss+xml"/>
   <link rel="shortcut icon" href="http://piscesilent.github.io/img/favicon.ico"/>
   <link rel="apple-touch-icon" href="http://piscesilent.github.io/apple-touch-icon.png" />
   <link rel="apple-touch-icon-precomposed" href="http://piscesilent.github.io/apple-touch-icon.png" />
@@ -55,66 +54,182 @@
 
   </header>
   <div id="container">
-    <div id="main">
-      
-      <h2 id="2016-09">2016-09</h2>
-      
-      <section class="post" itemscope itemprop="blogPost">
-    <a href="http://piscesilent.github.io/post/mysql_index_2/" title="MySQL索引优化总结（二）" itemprop="url">
-    <h1 itemprop="name">MySQL索引优化总结（二）</h1>
-    <p itemprop="description">在优化数据库索引中，了解到在新版本的MySQL中，有两个比较重要的新技术，Push down 和 Index merge。于是查了资料做了一些总结。 Push down 索引下推（</p>
+    <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody">
+    <header class="article-info clearfix">
+  <h1 itemprop="name">
+      <a href="http://piscesilent.github.io/post/mysql_index_2/" title="MySQL索引优化总结（二）" itemprop="url">MySQL索引优化总结（二）</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="http://Piscesilent.github.io/" title="SilenT">SilenT</a>
+    
+  </p>
+  <p class="article-time">
     <time datetime="2016-09-01 00:15:23 &#43;0800 CST" itemprop="datePublished">2016年09月01日</time>
-  </a>
-</section>
+  </p>
+</header>
 
-      
-      
-      <h2 id="2016-08">2016-08</h2>
-      
-      <section class="post" itemscope itemprop="blogPost">
-    <a href="http://piscesilent.github.io/post/mysql_index_1/" title="MySQL索引优化总结（一）" itemprop="url">
-    <h1 itemprop="name">MySQL索引优化总结（一）</h1>
-    <p itemprop="description">Explain命令 explain用于获取查询相关的执行计划信息，在这个命令中可以知晓查询是如何执行的。 使用explain也很简单，只需要在所</p>
-    <time datetime="2016-08-30 11:53:21 &#43;0800 CST" itemprop="datePublished">2016年08月30日</time>
-  </a>
-</section>
+	<div class="article-content">
+    
+    
 
-      
-      
-      <h2 id="2016-07">2016-07</h2>
-      
-      <section class="post" itemscope itemprop="blogPost">
-    <a href="http://piscesilent.github.io/post/CORS/" title="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" itemprop="url">
-    <h1 itemprop="name">跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用</h1>
-    <p itemprop="description">CORS，即跨域资源共享（Cross-Origin Resource Sharing） 跨站HTTP请求是指发起请求的资源所在域不同于该请求所指向资源所在的域的</p>
-    <time datetime="2016-07-05 09:07:42 &#43;0800 CST" itemprop="datePublished">2016年07月05日</time>
-  </a>
-</section>
+<p>在优化数据库索引中，了解到在新版本的MySQL中，有两个比较重要的新技术，Push down 和 Index merge。于是查了资料做了一些总结。</p>
 
-      
-      
-      <h2 id="2016-05">2016-05</h2>
-      
-      <section class="post" itemscope itemprop="blogPost">
-    <a href="http://piscesilent.github.io/post/Java_exception/" title="关于Java异常机制设计" itemprop="url">
-    <h1 itemprop="name">关于Java异常机制设计</h1>
-    <p itemprop="description">转载请注明：http://piscesilent.github.io/2016/05/29/关于java异常机制设计 Java不同于C，它提供</p>
-    <time datetime="2016-05-29 10:35:37 &#43;0800 CST" itemprop="datePublished">2016年05月29日</time>
-  </a>
-</section>
+<h1 id="push-down">Push down</h1>
 
-      
-      <section class="post" itemscope itemprop="blogPost">
-    <a href="http://piscesilent.github.io/post/Elasticsearch1/" title="Elasticsearch 简单入门（一）" itemprop="url">
-    <h1 itemprop="name">Elasticsearch 简单入门（一）</h1>
-    <p itemprop="description">You Know, for Search Elasticsearch是一个实时的分布式搜索和分析引擎。它可以用于全文搜索，结构化搜索以及分析。 它是一个基于Lucene的搜索服</p>
-    <time datetime="2016-05-24 19:49:42 &#43;0800 CST" itemprop="datePublished">2016年05月24日</time>
-  </a>
-</section>
+<p>索引下推（Index Condition Pushdown）用于优化MySQL通过索引检索表的过程。</p>
 
-      
-      
+<p>如果没有ICP，存储引擎会遍历索引去定位表中的行，并返回给MySQL服务器。开启ICP后，如果在查询的WHERE条件中有部分条件可以使用索引，那么MySQL服务器会下推这部分索引到存储引擎，然后通过索引过滤的WHERE条件在存储引擎层进行数据过滤,而非将所有通过索引access到的结果传递到MySQL服务器层进行WHERE过滤。</p>
+
+<p>当使用Push down时：</p>
+
+<ol>
+<li><p>获取下一行的索引元组(但不是完整的行)。</p></li>
+
+<li><p>尝试只使用索引列检查是否符合条件。如果条件不满足,回到步骤1。只有满足条件才会回表读取数据。</p></li>
+
+<li><p>如果满足下推的索引条件，存储引擎通过索引元组定位和读取整行数据并返回给MySQL服务层。</p></li>
+
+<li><p>MySQL服务层评估没有被下推到存储引擎的WHERE条件，如果该行数据满足WHERE条件则使用，然后回到步骤1。</p></li>
+</ol>
+
+<p><img src="http://raw.githubusercontent.com/Piscesilent/pic-store/master/mysql_pushdown.png" alt="" /></p>
+
+<p>如果没有使用该技术的情况下，会在读取索引元组之后直接在表中定位读取整行数据。</p>
+
+<p>在一个测试表中建立一个索引：</p>
+
+<pre><code>ALTER TABLE `cms_article` 
+ADD INDEX `TEST_INDEX` (`audit_status` ASC, `create_by` ASC, `update_by` ASC);
+</code></pre>
+
+<p>开启Push down后：</p>
+
+<pre><code>mysql&gt; set optimizer_switch = &quot;index_condition_pushdown=on&quot;;
+mysql&gt; explain select * from cms_article where audit_status = 0 and update_by = '1'\G;
+******** 1. row ********
+           id: 1
+  select_type: SIMPLE
+        table: cms_article
+         type: ref
+possible_keys: TEST_INDEX
+          key: TEST_INDEX
+      key_len: 5
+          ref: const
+         rows: 735
+        Extra: Using index condition
+</code></pre>
+
+<p>对比开启前：</p>
+
+<pre><code>mysql&gt; set optimizer_switch = &quot;index_condition_pushdown=off&quot;;
+mysql&gt; explain select * from cms_article where audit_status = 0 and update_by = '1'\G;
+******** 1. row ********
+           id: 1
+  select_type: SIMPLE
+        table: cms_article
+         type: ref
+possible_keys: TEST_INDEX
+          key: TEST_INDEX
+      key_len: 5
+          ref: const
+         rows: 735
+        Extra: Using where
+</code></pre>
+
+<p>可以看出即使搜索条件不符合联合索引的最左匹配原则，但是MySQL还是对搜索进行了优化。</p>
+
+<h1 id="index-merge">Index merge</h1>
+
+<p>在多个列上建立独立的单列索引在之前并不会提高查询速度，因为每次查询只会使用到一个索引。但是在索引合并（Index merge）技术下，可以做到最大限度利用多个索引定位行。</p>
+
+<p>索引合并有三种情况：OR条件的Union，AND条件的Intersection，OR和AND条件的组合Union&amp;Intersection。Index merge其实就是分别通过对两个独立的索引进行过滤之后，将过滤之后的结果聚合在一起，然后在返回结果集。</p>
+
+<pre><code>mysql&gt; explain select * from cms_article where proprietary_id = '345345' or del_flag = 0 and audit_status = 0 \G;
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: cms_article
+         type: index_merge
+possible_keys: INDEX_PRO,INDEX_DEL_AUDIT
+          key: INDEX_PRO,INDEX_DEL_AUDIT
+      key_len: 259,10
+          ref: NULL
+         rows: 734
+        Extra: Using union(INDEX_PRO,INDEX_DEL_AUDIT); Using where
+</code></pre>
+
+<p>其type表明使用了索引合并，且在Extra中详细说明了合并方式。这里的OR条件就是利用了一个union方式的索引合并，将 <code>INDEX_PRO</code> 和 <code>INDEX_DEL_AUDIT</code> 合并后共同计算返回结果。</p>
+
+<p>虽然是一个优化技术，但索引合并更多时候说明了表上的索引创建有问题，在《高性能MySQL》中给出了理由：</p>
+
+<ol>
+<li><p>当对多个索引进行相交操作时，通常需要一个包含所有相关项的多列索引，而不是多个独立的单个索引。</p></li>
+
+<li><p>当对多个索引进行联合操作时，需要耗费大量资源进行索引合并，特别是索引选择性不高的情况下，需要扫描并返回大量的数据进行计算。</p></li>
+
+<li><p>在并发大的情况下谨慎使用Index merge。</p></li>
+</ol>
+
+<h3 id="参考文档">参考文档：</h3>
+
+<ol>
+<li><p><a href="https://dev.mysql.com/doc/refman/5.6/en/index-condition-pushdown-optimization.html" title="https://dev.mysql.com/doc/refman/5.6/en/index-condition-pushdown-optimization.html">https://dev.mysql.com/doc/refman/5.6/en/index-condition-pushdown-optimization.html
+</a></p></li>
+
+<li><p>《高性能MySQL（第三版）》</p></li>
+</ol>
+
+	</div>
+  <footer class="article-footer clearfix">
+  
+
+<div class="article-tags">
+  <span></span>
+  
+  <a href="http://piscesilent.github.io/tags/mysql">MySQL</a>
+  
+</div>
+
+
+
+
+
+  <div class="article-share" id="share">
+    <div data-url="http://piscesilent.github.io/post/mysql_index_2/" data-title="MySQL索引优化总结（二）" data-tsina="1" class="share clearfix">
     </div>
+  </div>
+</footer>
+
+	</article>
+  
+
+
+<section class="comment">
+<div id="disqus_thread"></div>
+</section>
+<script>
+
+
+var disqus_config = function () {
+this.page.url = "http://piscesilent.github.io/post/mysql_index_2/";
+this.page.identifier = "http://piscesilent.github.io/post/mysql_index_2/";
+};
+(function() { 
+var d = document, s = d.createElement('script');
+
+s.src = '//SilenT.disqus.com/embed.js';
+
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+</div>
+
     <div class="openaside"><a class="navbutton" href="#" title="显示侧边栏"></a></div>
 <div id="asidepart">
 <div class="closeaside"><a class="closebutton" href="#" title="隐藏侧边栏"></a></div>
@@ -192,10 +307,6 @@
 
 
   
-<div class="rsspart">
-  <a rel="nofollow" href="http://piscesilent.github.io/feed.xml" type="application/rss+xml" target="_blank">RSS 订阅</a>
-</div>
-
 
 </aside>
 </div>
@@ -286,6 +397,38 @@ $(document).ready(function(){
 
 <script type="text/javascript">
 $(document).ready(function(){
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+    c.click(function(){
+      ta.css('display', 'block').addClass('fadeIn');
+    });
+    o.click(function(){
+      ta.css('display', 'none');
+    });
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,320-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){
   var $this = $('.share'),
       url = $this.attr('data-url'),
       encodedUrl = encodeURIComponent(url),
@@ -312,6 +455,27 @@ $(document).ready(function(){
 });
 </script>
 
+
+<link rel="stylesheet" href="http://piscesilent.github.io/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="http://piscesilent.github.io/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){
+  $('.article-content').each(function(i){
+    $(this).find('img').each(function(){
+      if ($(this).parent().hasClass('fancybox')) return;
+      var alt = this.alt;
+      if (alt) $(this).after('<span class="caption">' + alt + '</span>');
+      $(this).wrap('<a href="' + this.src + '" title="' + alt + '" class="fancybox"></a>');
+    });
+    $(this).find('.fancybox').each(function(){
+      $(this).attr('rel', 'article' + i);
+    });
+  });
+  if($.fancybox){
+    $('.fancybox').fancybox();
+  }
+});
+</script>
 
 
 <script>

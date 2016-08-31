@@ -6,8 +6,125 @@
     <description>Recent content in Mysql on SilenT&#39;s Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-CN</language>
-    <lastBuildDate>Tue, 30 Aug 2016 11:53:21 +0800</lastBuildDate>
+    <lastBuildDate>Thu, 01 Sep 2016 00:15:23 +0800</lastBuildDate>
     <atom:link href="http://Piscesilent.github.io/tags/mysql/feed/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>MySQL索引优化总结（二）</title>
+      <link>http://piscesilent.github.io/post/mysql_index_2/</link>
+      <pubDate>Thu, 01 Sep 2016 00:15:23 +0800</pubDate>
+      
+      <guid>http://piscesilent.github.io/post/mysql_index_2/</guid>
+      <description>
+
+&lt;p&gt;在优化数据库索引中，了解到在新版本的MySQL中，有两个比较重要的新技术，Push down 和 Index merge。于是查了资料做了一些总结。&lt;/p&gt;
+
+&lt;h1 id=&#34;push-down&#34;&gt;Push down&lt;/h1&gt;
+
+&lt;p&gt;索引下推（Index Condition Pushdown）用于优化MySQL通过索引检索表的过程。&lt;/p&gt;
+
+&lt;p&gt;如果没有ICP，存储引擎会遍历索引去定位表中的行，并返回给MySQL服务器。开启ICP后，如果在查询的WHERE条件中有部分条件可以使用索引，那么MySQL服务器会下推这部分索引到存储引擎，然后通过索引过滤的WHERE条件在存储引擎层进行数据过滤,而非将所有通过索引access到的结果传递到MySQL服务器层进行WHERE过滤。&lt;/p&gt;
+
+&lt;p&gt;当使用Push down时：&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;获取下一行的索引元组(但不是完整的行)。&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;尝试只使用索引列检查是否符合条件。如果条件不满足,回到步骤1。只有满足条件才会回表读取数据。&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;如果满足下推的索引条件，存储引擎通过索引元组定位和读取整行数据并返回给MySQL服务层。&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;MySQL服务层评估没有被下推到存储引擎的WHERE条件，如果该行数据满足WHERE条件则使用，然后回到步骤1。&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://raw.githubusercontent.com/Piscesilent/pic-store/master/mysql_pushdown.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;如果没有使用该技术的情况下，会在读取索引元组之后直接在表中定位读取整行数据。&lt;/p&gt;
+
+&lt;p&gt;在一个测试表中建立一个索引：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ALTER TABLE `cms_article` 
+ADD INDEX `TEST_INDEX` (`audit_status` ASC, `create_by` ASC, `update_by` ASC);
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;开启Push down后：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; set optimizer_switch = &amp;quot;index_condition_pushdown=on&amp;quot;;
+mysql&amp;gt; explain select * from cms_article where audit_status = 0 and update_by = &#39;1&#39;\G;
+******** 1. row ********
+           id: 1
+  select_type: SIMPLE
+        table: cms_article
+         type: ref
+possible_keys: TEST_INDEX
+          key: TEST_INDEX
+      key_len: 5
+          ref: const
+         rows: 735
+        Extra: Using index condition
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;对比开启前：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; set optimizer_switch = &amp;quot;index_condition_pushdown=off&amp;quot;;
+mysql&amp;gt; explain select * from cms_article where audit_status = 0 and update_by = &#39;1&#39;\G;
+******** 1. row ********
+           id: 1
+  select_type: SIMPLE
+        table: cms_article
+         type: ref
+possible_keys: TEST_INDEX
+          key: TEST_INDEX
+      key_len: 5
+          ref: const
+         rows: 735
+        Extra: Using where
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;可以看出即使搜索条件不符合联合索引的最左匹配原则，但是MySQL还是对搜索进行了优化。&lt;/p&gt;
+
+&lt;h1 id=&#34;index-merge&#34;&gt;Index merge&lt;/h1&gt;
+
+&lt;p&gt;在多个列上建立独立的单列索引在之前并不会提高查询速度，因为每次查询只会使用到一个索引。但是在索引合并（Index merge）技术下，可以做到最大限度利用多个索引定位行。&lt;/p&gt;
+
+&lt;p&gt;索引合并有三种情况：OR条件的Union，AND条件的Intersection，OR和AND条件的组合Union&amp;amp;Intersection。Index merge其实就是分别通过对两个独立的索引进行过滤之后，将过滤之后的结果聚合在一起，然后在返回结果集。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; explain select * from cms_article where proprietary_id = &#39;345345&#39; or del_flag = 0 and audit_status = 0 \G;
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: cms_article
+         type: index_merge
+possible_keys: INDEX_PRO,INDEX_DEL_AUDIT
+          key: INDEX_PRO,INDEX_DEL_AUDIT
+      key_len: 259,10
+          ref: NULL
+         rows: 734
+        Extra: Using union(INDEX_PRO,INDEX_DEL_AUDIT); Using where
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;其type表明使用了索引合并，且在Extra中详细说明了合并方式。这里的OR条件就是利用了一个union方式的索引合并，将 &lt;code&gt;INDEX_PRO&lt;/code&gt; 和 &lt;code&gt;INDEX_DEL_AUDIT&lt;/code&gt; 合并后共同计算返回结果。&lt;/p&gt;
+
+&lt;p&gt;虽然是一个优化技术，但索引合并更多时候说明了表上的索引创建有问题，在《高性能MySQL》中给出了理由：&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;当对多个索引进行相交操作时，通常需要一个包含所有相关项的多列索引，而不是多个独立的单个索引。&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;当对多个索引进行联合操作时，需要耗费大量资源进行索引合并，特别是索引选择性不高的情况下，需要扫描并返回大量的数据进行计算。&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;在并发大的情况下谨慎使用Index merge。&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&#34;参考文档&#34;&gt;参考文档：&lt;/h3&gt;
+
+&lt;ol&gt;
+&lt;li&gt;&lt;p&gt;&lt;a href=&#34;https://dev.mysql.com/doc/refman/5.6/en/index-condition-pushdown-optimization.html&#34; title=&#34;https://dev.mysql.com/doc/refman/5.6/en/index-condition-pushdown-optimization.html&#34;&gt;https://dev.mysql.com/doc/refman/5.6/en/index-condition-pushdown-optimization.html
+&lt;/a&gt;&lt;/p&gt;&lt;/li&gt;
+
+&lt;li&gt;&lt;p&gt;《高性能MySQL（第三版）》&lt;/p&gt;&lt;/li&gt;
+&lt;/ol&gt;
+</description>
+    </item>
     
     <item>
       <title>MySQL索引优化总结（一）</title>
