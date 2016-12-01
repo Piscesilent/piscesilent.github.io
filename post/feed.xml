@@ -6,8 +6,228 @@
     <description>Recent content in Posts on SilenT&#39;s Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-CN</language>
-    <lastBuildDate>Thu, 01 Sep 2016 00:15:23 +0800</lastBuildDate>
+    <lastBuildDate>Thu, 01 Dec 2016 16:40:45 +0800</lastBuildDate>
     <atom:link href="http://Piscesilent.github.io/post/feed/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>MySQL 基准测试</title>
+      <link>http://piscesilent.github.io/post/MySql_benchmark/</link>
+      <pubDate>Thu, 01 Dec 2016 16:40:45 +0800</pubDate>
+      
+      <guid>http://piscesilent.github.io/post/MySql_benchmark/</guid>
+      <description>
+
+&lt;h2 id=&#34;前言说明&#34;&gt;前言说明&lt;/h2&gt;
+
+&lt;p&gt;近期公司要求对线上使用的阿里云RDS做性能测试，经过一番调研，选用sysbench和mysqlslap这两个工具对线上数据库进行性能测试，本次测试数据库引擎均使用InnoDb。&lt;/p&gt;
+
+&lt;p&gt;对于数据库测试，在各个性能指标中，应该着重关注以下几个点：&lt;/p&gt;
+
+&lt;p&gt;(1)QPS(每秒Query量)&lt;/p&gt;
+
+&lt;p&gt;每秒查询率QPS是对一个特定的查询服务器在规定时间内所处理流量多少的衡量标准，即每秒的响应请求数，大致相当于最大吞吐能力。&lt;/p&gt;
+
+&lt;p&gt;其公式为：QPS = Queries / seconds&lt;/p&gt;
+
+&lt;p&gt;(2)TPS(每秒事务量)&lt;/p&gt;
+
+&lt;p&gt;一台数据库服务器在单位时间内处理的事务的个数，在实际使用环境下，一般倾向于尽量使用简单的SQL语句，所以可以理解为数据库的增删改吞吐量。&lt;/p&gt;
+
+&lt;p&gt;其公式为：TPS = (Com_commit + Com_rollback) / seconds&lt;/p&gt;
+
+&lt;p&gt;(3) CPU/内存使用量&lt;/p&gt;
+
+&lt;p&gt;在实际使用中，可以通过这两个数据指示数据库负荷，在压测中，要保证CPU满载，其压测结果才真实有效。&lt;/p&gt;
+
+&lt;h2 id=&#34;sysbench&#34;&gt;sysbench&lt;/h2&gt;
+
+&lt;p&gt;sysbench是一款开源的多线程性能测试工具，可以用于对数据库进行简单的性能测试。&lt;/p&gt;
+
+&lt;p&gt;sysbench项目地址：&lt;a href=&#34;https://github.com/akopytov/sysbench&#34;&gt;https://github.com/akopytov/sysbench&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;sysbench的部参数说明如下：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;--oltp-table-size：指定表的行数
+--mysql-host：数据库主机地址
+--mysql-user：数据库账号，使用高权限帐号
+--mysql-passwor：数据库密码
+--mysql-table-engine：指定存储引擎，本次测试使用InnoDb
+--mysql-db：指定在哪个数据库创建测试表
+--test：指定Lua脚本, 本次使用官方默认oltp
+--db-driver：指定数据库驱动
+--num-threads：指定并发线程数
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;在进行测试前，首先准备数据，使用以下命令进行数据的准备：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;sysbench --test=oltp --oltp-table-size=10000 --oltp-table-name=test \
+--mysql-table-engine=innodb \
+--mysql-host=host \
+--mysql-db=test \
+--mysql-user=user \
+--mysql-password=password \
+--db-driver=mysql \
+prepare
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;随后会在制定数据库中生成一张测试表，其基本结构和填充内容如下：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;mysql&amp;gt; select * from test limit 1;
++----+---+---+----------------------------------------------------+
+| id | k | c | pad                                                |
++----+---+---+----------------------------------------------------+
+|  1 | 0 |   | qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt |
++----+---+---+----------------------------------------------------+
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;然后运行以下命令开始任务：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;sysbench --test=oltp --oltp-table-size=10000 --oltp-table-name=test \
+--mysql-table-engine=innodb \
+--mysql-host=host \
+--mysql-db=test \
+--mysql-user=user \
+--mysql-password=password \
+--db-driver=mysql \
+--num-threads=8 \
+run
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;经过了一段时间的测试，其结果显示如下：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;OLTP test statistics:
+    queries performed:
+        read:                            140000
+        write:                           50000
+        other:                           20000
+        total:                           210000
+    transactions:                        10000  (951.74 per sec.)
+    deadlocks:                           0      (0.00 per sec.)
+    read/write requests:                 190000 (18083.06 per sec.)
+    other operations:                    20000  (1903.48 per sec.)
+
+Test execution summary:
+    total time:                          10.5071s
+    total number of events:              10000
+    total time taken by event execution: 1996.0691
+    per-request statistics:
+         min:                                 40.74ms
+         avg:                                199.61ms
+         max:                               1304.29ms
+         approx.  95 percentile:             491.18ms
+
+Threads fairness:
+    events (avg/stddev):           50.0000/4.50
+    execution time (avg/stddev):   9.9803/0.10
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;在输出的结果中，read表示总查询语句，write表示总增删改语句，其中transactions应该重点关注，括号内的数值即代表TPS。对于QPS而言，可以通过queries performed中的total参数除以Test execution summary中的total time获得。对于per-request statistics中的参数，可以重点关注avg（平均执行时间），以及approx.  95 percentile（95%置信区间内的语句执行时间的最大值）。&lt;/p&gt;
+
+&lt;p&gt;最后使用以下语句清除临时数据：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;sysbench --test=oltp --oltp-table-size=10000 --oltp-table-name=test \
+--mysql-table-engine=innodb \
+--mysql-host=host \
+--mysql-db=test \
+--mysql-user=user \
+--mysql-password=password \
+--db-driver=mysql \
+cleanup
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;在使用sysbench进行测试时，出现一些奇怪的现象，在使用官方脚本时，如果测试表行数过小，会出现很多死锁的情况。在这里建议尽量使用大表进行测试，其官方脚本在大表中的测试成绩和在小表中并无数量级的差距。&lt;/p&gt;
+
+&lt;h2 id=&#34;mysqlslap&#34;&gt;mysqlslap&lt;/h2&gt;
+
+&lt;p&gt;在使用了sysbench进行基准测试之后，应该对常用的语句进行一个基准测试，这类测试应根据每个系统实际使用情况，选取出具有代表性的语句进行有针对性的测试。这在指导开发工作中如何选用正确的SQL语句有相当大的作用。&lt;/p&gt;
+
+&lt;p&gt;对于常用的单条语句测试，选用MySQL自带的工具mysqlslap，就可以很好的达到测试目的。在测试过程中，本次选用了数据库已经存在的表进行测试，对于没有这么大数据量的表的同学，以下给出一个创建测试表和测试数据的方法供大家参考：&lt;/p&gt;
+
+&lt;p&gt;首先创建测试表：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;CREATE TABLE `test_10k` (
+  `id` VARCHAR(64) NOT NULL,
+  `title` VARCHAR(255) DEFAULT &#39;&#39;,
+  `del_flag` TINYINT(1) DEFAULT 0,
+  `longitude` DOUBLE DEFAULT 0.0,
+  `sum` int(11) DEFAULT &#39;0&#39;,
+  `create_date` DATETIME DEFAULT NOW(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;接下来使用存储过程生成测试数据：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;delimiter $$ 
+SET AUTOCOMMIT = 0$$
+create  procedure create_random_date_10k()  
+begin
+declare v_cnt decimal (10)  default 0; 
+dd:loop            
+        INSERT INTO test_10k VALUE         
+        (REPLACE(UUID(),&#39;-&#39;,&#39;&#39;),CONCAT(&#39;测试&#39;,UUID()),0,RAND()*100,FLOOR(100000*RAND()),NOW()),       
+        (REPLACE(UUID(),&#39;-&#39;,&#39;&#39;),CONCAT(&#39;测试&#39;,UUID()),0,RAND()*100,FLOOR(100000*RAND()),NOW()),        
+        (REPLACE(UUID(),&#39;-&#39;,&#39;&#39;),CONCAT(&#39;测试&#39;,UUID()),0,RAND()*100,FLOOR(100000*RAND()),NOW()),
+        (REPLACE(UUID(),&#39;-&#39;,&#39;&#39;),CONCAT(&#39;测试&#39;,UUID()),0,RAND()*100,FLOOR(100000*RAND()),NOW()),        
+        (REPLACE(UUID(),&#39;-&#39;,&#39;&#39;),CONCAT(&#39;测试&#39;,UUID()),0,RAND()*100,FLOOR(100000*RAND()),NOW()),         
+        (REPLACE(UUID(),&#39;-&#39;,&#39;&#39;),CONCAT(&#39;测试&#39;,UUID()),1,RAND()*100,FLOOR(100000*RAND()),NOW()),        
+        (REPLACE(UUID(),&#39;-&#39;,&#39;&#39;),CONCAT(&#39;测试&#39;,UUID()),1,RAND()*100,FLOOR(100000*RAND()),NOW()),       
+        (REPLACE(UUID(),&#39;-&#39;,&#39;&#39;),CONCAT(&#39;测试&#39;,UUID()),1,RAND()*100,FLOOR(100000*RAND()),NOW()),         
+        (REPLACE(UUID(),&#39;-&#39;,&#39;&#39;),CONCAT(&#39;测试&#39;,UUID()),1,RAND()*100,FLOOR(100000*RAND()),NOW()),        
+        (REPLACE(UUID(),&#39;-&#39;,&#39;&#39;),CONCAT(&#39;测试&#39;,UUID()),1,RAND()*100,FLOOR(100000*RAND()),NOW());                 
+        commit;              
+        set v_cnt = v_cnt+10;                            
+            if  v_cnt = 10000 then leave dd;                           
+            end if;          
+        end loop dd ; 
+end;$$ 
+delimiter ;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;随后调用写好的存储过程：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;call create_random_date_10k;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;对于mysqlslap命令的使用，可以参考官方文档：&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&#34;http://dev.mysql.com/doc/refman/5.6/en/mysqlslap.html&#34;&gt;http://dev.mysql.com/doc/refman/5.6/en/mysqlslap.html&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;这边列出一些常用的参数：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;--concurrency：代表并发数量，多个可以用逗号隔开，concurrency=10,50,100, 并发连接线程数分别是10、50、100个并发。
+--engines：代表要测试的引擎。
+--iterations：代表要循环执行的次数。
+--number-of-queries：一次测试代表执行语句的总数
+--create-schema：需要测试的schema。
+--query 使用自定义脚本执行测试，例如可以调用自定义的一个存储过程或者sql语句来执行测试。
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;例子如下：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;mysqlslap -hhost -uuser -ppassword --concurrency=100 --iterations=1 --create-schema=&#39;test&#39; --query=&#39;select * from test_10k;&#39; --number-of-queries=10000 --debug-info
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;其打印的结果如下：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Benchmark
+    Average number of seconds to run all queries: 11.221 seconds
+    Minimum number of seconds to run all queries: 11.221 seconds
+    Maximum number of seconds to run all queries: 11.221 seconds
+    Number of clients running queries: 100
+    Average number of queries per client: 10
+
+
+User time 4.62, System time 3.98
+Maximum resident set size 123172, Integral resident set size 0
+Non-physical pagefaults 155744, Physical pagefaults 11, Swaps 0
+Blocks in 1944 out 0, Messages in 0 out 0, Signals 0
+Voluntary context switches 153923, Involuntary context switches 5693
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;如果要计算QPS，可以通过（number-of-queries * iterations）除以结果中的Average number of seconds to run all queries秒数。&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>MySQL索引优化总结（二）</title>

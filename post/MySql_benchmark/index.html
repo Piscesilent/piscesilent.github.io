@@ -2,16 +2,16 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用 - SilenT&#39;s Blog</title>
+  <title>MySQL 基准测试 - SilenT&#39;s Blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
-  <meta name="keywords" content="跨域,CORS,Spring MVC,Shiro,">
-  <meta name="description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用">
+  <meta name="keywords" content="MySQL,">
+  <meta name="description" content="MySQL 基准测试">
   <meta name="author" content="SilenT">
-  <meta itemprop="name" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用 - SilenT&#39;s Blog">
-  <meta itemprop="description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用">
+  <meta itemprop="name" content="MySQL 基准测试 - SilenT&#39;s Blog">
+  <meta itemprop="description" content="MySQL 基准测试">
   <meta itemprop="image" content="http://piscesilent.github.io/img/author.jpg">
   
-  <meta name="twitter:description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" />
+  <meta name="twitter:description" content="MySQL 基准测试" />
   
   <link rel="shortcut icon" href="http://piscesilent.github.io/img/favicon.ico"/>
   <link rel="apple-touch-icon" href="http://piscesilent.github.io/apple-touch-icon.png" />
@@ -58,7 +58,7 @@
 	<article itemprop="articleBody">
     <header class="article-info clearfix">
   <h1 itemprop="name">
-      <a href="http://piscesilent.github.io/post/CORS/" title="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" itemprop="url">跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用</a>
+      <a href="http://piscesilent.github.io/post/MySql_benchmark/" title="MySQL 基准测试" itemprop="url">MySQL 基准测试</a>
   </h1>
   <p class="article-author">By
     
@@ -66,7 +66,7 @@
     
   </p>
   <p class="article-time">
-    <time datetime="2016-07-05 09:07:42 &#43;0800 CST" itemprop="datePublished">2016年07月05日</time>
+    <time datetime="2016-12-01 16:40:45 &#43;0800 CST" itemprop="datePublished">2016年12月01日</time>
   </p>
 </header>
 
@@ -74,241 +74,215 @@
     
     
 
-<p>CORS，即跨域资源共享（Cross-Origin Resource Sharing）
-跨站HTTP请求是指发起请求的资源所在域不同于该请求所指向资源所在的域的HTTP请求。</p>
+<h2 id="前言说明">前言说明</h2>
 
-<p>CORS旨在定义一种规范让浏览器在接收到从提供者获取的资源时能够正决定是否应该将此资源分发给消费者作进一步处理。CROS利用资源提供者的显式授权来决定目标资源是否应该与消费者共享。</p>
+<p>近期公司要求对线上使用的阿里云RDS做性能测试，经过一番调研，选用sysbench和mysqlslap这两个工具对线上数据库进行性能测试，本次测试数据库引擎均使用InnoDb。</p>
 
-<p>JavaScript出于安全方面的考虑，不允许跨域调用其他页面的对象，其同源策略说明如下：</p>
+<p>对于数据库测试，在各个性能指标中，应该着重关注以下几个点：</p>
 
-<table>
-    <tr>
-        <th>链接</th>
-        <th>说明</th>
-        <th>是否跨域</th>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>www.a.com/a</p></td>
-        <td>同一域名</td>
-        <td>否</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>www.a.com/b</p></td>
-        <td>同一域名下的不同目录</td>
-        <td>否</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com:8080/a</p><p>www.a.com:8081/a</p></td>
-        <td>同一域名下的不同端口</td>
-        <td>是</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>api.a.com/a</p></td>
-        <td>子域不同</td>
-        <td>是</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>www.b.com/a</p></td>
-        <td>不同域名</td>
-        <td>是</td>
-    </tr>
-</table>
+<p>(1)QPS(每秒Query量)</p>
 
-<hr />
+<p>每秒查询率QPS是对一个特定的查询服务器在规定时间内所处理流量多少的衡量标准，即每秒的响应请求数，大致相当于最大吞吐能力。</p>
 
-<h1 id="一-cors相关">一、CORS相关</h1>
+<p>其公式为：QPS = Queries / seconds</p>
 
-<p>当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从
-    <a href="http://www.a.com">http://www.a.com</a>
-尝试去访问
-    www.b.com
-下的资源时，</p>
+<p>(2)TPS(每秒事务量)</p>
 
-<pre><code>Origin:http://www.a.com
+<p>一台数据库服务器在单位时间内处理的事务的个数，在实际使用环境下，一般倾向于尽量使用简单的SQL语句，所以可以理解为数据库的增删改吞吐量。</p>
+
+<p>其公式为：TPS = (Com_commit + Com_rollback) / seconds</p>
+
+<p>(3) CPU/内存使用量</p>
+
+<p>在实际使用中，可以通过这两个数据指示数据库负荷，在压测中，要保证CPU满载，其压测结果才真实有效。</p>
+
+<h2 id="sysbench">sysbench</h2>
+
+<p>sysbench是一款开源的多线程性能测试工具，可以用于对数据库进行简单的性能测试。</p>
+
+<p>sysbench项目地址：<a href="https://github.com/akopytov/sysbench">https://github.com/akopytov/sysbench</a></p>
+
+<p>sysbench的部参数说明如下：</p>
+
+<pre><code>--oltp-table-size：指定表的行数
+--mysql-host：数据库主机地址
+--mysql-user：数据库账号，使用高权限帐号
+--mysql-passwor：数据库密码
+--mysql-table-engine：指定存储引擎，本次测试使用InnoDb
+--mysql-db：指定在哪个数据库创建测试表
+--test：指定Lua脚本, 本次使用官方默认oltp
+--db-driver：指定数据库驱动
+--num-threads：指定并发线程数
 </code></pre>
 
-<p>将会附加在发往www.b.com的请求头上</p>
+<p>在进行测试前，首先准备数据，使用以下命令进行数据的准备：</p>
 
-<p>当服务端接受到这个OPTIONS请求时，会有三种处理方式：</p>
-
-<p>1、不允许进行跨域资源请求</p>
-
-<p>2、允许所有的域进行资源访问，即在响应头上加入：</p>
-
-<pre><code>Access-Control-Allow-Origin: *
+<pre><code>sysbench --test=oltp --oltp-table-size=10000 --oltp-table-name=test \
+--mysql-table-engine=innodb \
+--mysql-host=host \
+--mysql-db=test \
+--mysql-user=user \
+--mysql-password=password \
+--db-driver=mysql \
+prepare
 </code></pre>
 
-<p>如果这样做，处于安全性的考虑，响应头上将不能携带cookie，所以一般的情况应该是这样：</p>
+<p>随后会在制定数据库中生成一张测试表，其基本结构和填充内容如下：</p>
 
-<p>3、在响应头上声明可以进行访问的域：</p>
-
-<pre><code>Access-Control-Allow-Origin: http://www.a.com
+<pre><code>mysql&gt; select * from test limit 1;
++----+---+---+----------------------------------------------------+
+| id | k | c | pad                                                |
++----+---+---+----------------------------------------------------+
+|  1 | 0 |   | qqqqqqqqqqwwwwwwwwwweeeeeeeeeerrrrrrrrrrtttttttttt |
++----+---+---+----------------------------------------------------+
 </code></pre>
 
-<p>这样，www.a.com就可以请求到www.b.com的资源。</p>
+<p>然后运行以下命令开始任务：</p>
 
-<p>除此之外，与CORS相关的请求头信息还有：</p>
-
-<pre><code>Access-Control-Request-Method
+<pre><code>sysbench --test=oltp --oltp-table-size=10000 --oltp-table-name=test \
+--mysql-table-engine=innodb \
+--mysql-host=host \
+--mysql-db=test \
+--mysql-user=user \
+--mysql-password=password \
+--db-driver=mysql \
+--num-threads=8 \
+run
 </code></pre>
 
-<p>这个请求头的作用在于指定接下来的跨域请求中的方法。</p>
+<p>经过了一段时间的测试，其结果显示如下：</p>
 
-<pre><code>Access-Control-Request-Header
+<pre><code>OLTP test statistics:
+    queries performed:
+        read:                            140000
+        write:                           50000
+        other:                           20000
+        total:                           210000
+    transactions:                        10000  (951.74 per sec.)
+    deadlocks:                           0      (0.00 per sec.)
+    read/write requests:                 190000 (18083.06 per sec.)
+    other operations:                    20000  (1903.48 per sec.)
+
+Test execution summary:
+    total time:                          10.5071s
+    total number of events:              10000
+    total time taken by event execution: 1996.0691
+    per-request statistics:
+         min:                                 40.74ms
+         avg:                                199.61ms
+         max:                               1304.29ms
+         approx.  95 percentile:             491.18ms
+
+Threads fairness:
+    events (avg/stddev):           50.0000/4.50
+    execution time (avg/stddev):   9.9803/0.10
 </code></pre>
 
-<p>这个是指定跨域请求时所携带的自定义头信息。</p>
+<p>在输出的结果中，read表示总查询语句，write表示总增删改语句，其中transactions应该重点关注，括号内的数值即代表TPS。对于QPS而言，可以通过queries performed中的total参数除以Test execution summary中的total time获得。对于per-request statistics中的参数，可以重点关注avg（平均执行时间），以及approx.  95 percentile（95%置信区间内的语句执行时间的最大值）。</p>
 
-<p>与CORS相关的响应体信息还有：</p>
+<p>最后使用以下语句清除临时数据：</p>
 
-<pre><code>Access-Control-Allow-Methods
+<pre><code>sysbench --test=oltp --oltp-table-size=10000 --oltp-table-name=test \
+--mysql-table-engine=innodb \
+--mysql-host=host \
+--mysql-db=test \
+--mysql-user=user \
+--mysql-password=password \
+--db-driver=mysql \
+cleanup
 </code></pre>
 
-<p>这个响应头的作用在于指定在接下来的真正的请求中被允许的方法（Method），比如在这里设置为&rdquo;POST&rdquo;，如果接下来的请求是PUT方法，那么将会失败。</p>
+<p>在使用sysbench进行测试时，出现一些奇怪的现象，在使用官方脚本时，如果测试表行数过小，会出现很多死锁的情况。在这里建议尽量使用大表进行测试，其官方脚本在大表中的测试成绩和在小表中并无数量级的差距。</p>
 
-<pre><code>Access-Control-Allow-Headers
+<h2 id="mysqlslap">mysqlslap</h2>
+
+<p>在使用了sysbench进行基准测试之后，应该对常用的语句进行一个基准测试，这类测试应根据每个系统实际使用情况，选取出具有代表性的语句进行有针对性的测试。这在指导开发工作中如何选用正确的SQL语句有相当大的作用。</p>
+
+<p>对于常用的单条语句测试，选用MySQL自带的工具mysqlslap，就可以很好的达到测试目的。在测试过程中，本次选用了数据库已经存在的表进行测试，对于没有这么大数据量的表的同学，以下给出一个创建测试表和测试数据的方法供大家参考：</p>
+
+<p>首先创建测试表：</p>
+
+<pre><code>CREATE TABLE `test_10k` (
+  `id` VARCHAR(64) NOT NULL,
+  `title` VARCHAR(255) DEFAULT '',
+  `del_flag` TINYINT(1) DEFAULT 0,
+  `longitude` DOUBLE DEFAULT 0.0,
+  `sum` int(11) DEFAULT '0',
+  `create_date` DATETIME DEFAULT NOW(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 </code></pre>
 
-<p>这个是指请求中所允许携带的请求头信息。</p>
+<p>接下来使用存储过程生成测试数据：</p>
 
-<pre><code>Access-Control-Max-Age
+<pre><code>delimiter $$ 
+SET AUTOCOMMIT = 0$$
+create  procedure create_random_date_10k()  
+begin
+declare v_cnt decimal (10)  default 0; 
+dd:loop            
+        INSERT INTO test_10k VALUE         
+        (REPLACE(UUID(),'-',''),CONCAT('测试',UUID()),0,RAND()*100,FLOOR(100000*RAND()),NOW()),       
+        (REPLACE(UUID(),'-',''),CONCAT('测试',UUID()),0,RAND()*100,FLOOR(100000*RAND()),NOW()),        
+        (REPLACE(UUID(),'-',''),CONCAT('测试',UUID()),0,RAND()*100,FLOOR(100000*RAND()),NOW()),
+        (REPLACE(UUID(),'-',''),CONCAT('测试',UUID()),0,RAND()*100,FLOOR(100000*RAND()),NOW()),        
+        (REPLACE(UUID(),'-',''),CONCAT('测试',UUID()),0,RAND()*100,FLOOR(100000*RAND()),NOW()),         
+        (REPLACE(UUID(),'-',''),CONCAT('测试',UUID()),1,RAND()*100,FLOOR(100000*RAND()),NOW()),        
+        (REPLACE(UUID(),'-',''),CONCAT('测试',UUID()),1,RAND()*100,FLOOR(100000*RAND()),NOW()),       
+        (REPLACE(UUID(),'-',''),CONCAT('测试',UUID()),1,RAND()*100,FLOOR(100000*RAND()),NOW()),         
+        (REPLACE(UUID(),'-',''),CONCAT('测试',UUID()),1,RAND()*100,FLOOR(100000*RAND()),NOW()),        
+        (REPLACE(UUID(),'-',''),CONCAT('测试',UUID()),1,RAND()*100,FLOOR(100000*RAND()),NOW());                 
+        commit;              
+        set v_cnt = v_cnt+10;                            
+            if  v_cnt = 10000 then leave dd;                           
+            end if;          
+        end loop dd ; 
+end;$$ 
+delimiter ;
 </code></pre>
 
-<p>可以指定缓存时间，避免浏览器频繁发送OPTIONS请求。</p>
+<p>随后调用写好的存储过程：</p>
 
-<pre><code>Access-Control-Allow-Credentials
+<pre><code>call create_random_date_10k;
 </code></pre>
 
-<p>这个响应头用来表明服务端是否支持用户凭证，比如Cookie、HTTP-Authentication、证书等。如果需要，则设置此值为true。</p>
+<p>对于mysqlslap命令的使用，可以参考官方文档：</p>
 
-<h1 id="二-spring-mvc-中的应用">二、Spring MVC 中的应用</h1>
+<p><a href="http://dev.mysql.com/doc/refman/5.6/en/mysqlslap.html">http://dev.mysql.com/doc/refman/5.6/en/mysqlslap.html</a></p>
 
-<p>在实际Spring MVC + Shiro 项目中，由于进行前后端分离改造不可避免的要遇到跨域问题。</p>
+<p>这边列出一些常用的参数：</p>
 
-<p>首先，先要解决的是Spring MVC对OPTIONS请求拦截的问题。在Spring MVC servlet配置中，添加</p>
-
-<pre><code>&lt;init-param&gt;
-    &lt;param-name&gt;dispatchOptionsRequest&lt;/param-name&gt;
-    &lt;param-value&gt;true&lt;/param-value&gt;
-&lt;/init-param&gt;
+<pre><code>--concurrency：代表并发数量，多个可以用逗号隔开，concurrency=10,50,100, 并发连接线程数分别是10、50、100个并发。
+--engines：代表要测试的引擎。
+--iterations：代表要循环执行的次数。
+--number-of-queries：一次测试代表执行语句的总数
+--create-schema：需要测试的schema。
+--query 使用自定义脚本执行测试，例如可以调用自定义的一个存储过程或者sql语句来执行测试。
 </code></pre>
 
-<p>允许DispatcherServlet分发器分发Options请求。</p>
+<p>例子如下：</p>
 
-<p>在配置bean时，需要注意的是shiro也是会拦截OPTIONS请求的。由于OPTIONS请求中没有携带任何cookie信息，shiro直接会认为该请求没有权限进而拦截在外。所以，在shiro中要自定义一个filter，用于排除OPTIONS请求。</p>
-
-<pre><code>public class CorsUserAuthenticationFilter extends UserFilter {
-    /**
-     * 不过滤OPTIONS方法
-     */
-    @Override
-    protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
-        HttpServletRequest httpRequest = WebUtils.toHttp(request);
-        if (&quot;OPTIONS&quot;.equalsIgnoreCase(httpRequest.getMethod())) {
-            return true;
-        }
-
-        return super.isAccessAllowed(request, response, mappedValue);
-    }
-}
+<pre><code>mysqlslap -hhost -uuser -ppassword --concurrency=100 --iterations=1 --create-schema='test' --query='select * from test_10k;' --number-of-queries=10000 --debug-info
 </code></pre>
 
-<p>在这里继承了shiro自带的UserFilter，并重写isAccessAllowed函数，如果请求的Method为OPTIONS时，返回true，表示不过滤。</p>
+<p>其打印的结果如下：</p>
 
-<p>经过上述两步，OPTIONS请求我们就可以在程序中真正拿到并且可以控制其响应头参数，达到想要的目的。</p>
+<pre><code>Benchmark
+    Average number of seconds to run all queries: 11.221 seconds
+    Minimum number of seconds to run all queries: 11.221 seconds
+    Maximum number of seconds to run all queries: 11.221 seconds
+    Number of clients running queries: 100
+    Average number of queries per client: 10
 
-<p>一开始在项目中使用比较原始的方法，在复杂请求的同名接口上新增一个OPTIONS请求处理：</p>
 
-<pre><code>@RequestMapping(value = &quot;&quot;, method = RequestMethod.OPTIONS)
-public HttpEntity optionsHandle(AppUser appUser, HttpServletRequest request,
-        HttpServletResponse response) {
-    MultiValueMap&lt;String, String&gt; map = new LinkedMultiValueMap&lt;String, String&gt;();
-    String origin = request.getHeader(&quot;Origin&quot;);
-    map.add(&quot;Access-Control-Allow-Credentials&quot;, &quot;true&quot;);
-    map.add(&quot;Access-Control-Allow-Origin&quot;, origin);
-    map.add(&quot;Access-Control-Allow-Methods&quot;, &quot;POST,GET,OPTIONS,DELETE,PUT,OPTIONS&quot;);
-    map.add(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Requested-With,Content-Type,Accept&quot;);
-    HttpEntity he = new HttpEntity(map);
-    return he;
-}
+User time 4.62, System time 3.98
+Maximum resident set size 123172, Integral resident set size 0
+Non-physical pagefaults 155744, Physical pagefaults 11, Swaps 0
+Blocks in 1944 out 0, Messages in 0 out 0, Signals 0
+Voluntary context switches 153923, Involuntary context switches 5693
 </code></pre>
 
-<p>要注意的是@RequestMapping中的value要和复杂请求的value一致，即要保证他们俩的URL是一致的。在这边我只是为了方便调试才将请求的Origin直接放入
-    Access-Control-Allow-Origin
-中。在部署的时候，如果为了安全性考虑，可以将这个值写死，指定特定的域名才能跨域请求资源。</p>
-
-<p>当时测试通过后在考虑到项目中这么多接口，是否应该换一种方式进行处理更为妥当。考虑之后决定采用拦截器的方式实现。</p>
-
-<p>在Spring mvc的xml中添加：</p>
-
-<pre><code>&lt;mvc:interceptors&gt;
-    &lt;mvc:interceptor&gt;
-        &lt;mvc:mapping path=&quot;/**&quot; /&gt;
-        &lt;bean class=&quot;xxx.interceptor.CorsRequestInterceptor&quot; /&gt;
-    &lt;/mvc:interceptor&gt;
-&lt;/mvc:interceptors&gt;
-</code></pre>
-
-<p>这里配置了一个全地址匹配的拦截器，拦截器的实现如下：</p>
-
-<pre><code>public class CorsRequestInterceptor implements HandlerInterceptor {
-
-    String origin = &quot;&quot;;
-
-    @Override
-    public void afterCompletion(HttpServletRequest arg0,
-            HttpServletResponse arg1, Object arg2, Exception arg3)
-            throws Exception {
-    }
-
-    @Override
-    public void postHandle(HttpServletRequest arg0, HttpServletResponse response,
-            Object arg2, ModelAndView arg3) throws Exception {
-    }
-
-    @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
-            Object arg2) throws Exception {
-        origin = request.getHeader(&quot;Origin&quot;);
-        response.addHeader(&quot;Access-Control-Allow-Credentials&quot;,&quot;true&quot;);
-        response.addHeader(&quot;Access-Control-Allow-Origin&quot;, origin);
-        response.addHeader(&quot;Access-Control-Allow-Methods&quot;, &quot;POST,GET,DELETE,PUT,OPTIONS&quot;);
-        response.addHeader(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Requested-With,Content-Type,Accept&quot;);
-        return true;
-    }
-}
-</code></pre>
-
-<p>这样，可以在所有的响应中都加上跨域信息。</p>
-
-<p>对于OPTIONS方法的处理，通过一个匹配全地址的Controller进行处理：</p>
-
-<pre><code>@Controller
-public class OptionsMethodController {
-    @RequestMapping(value = {&quot;/**&quot;}, method = RequestMethod.OPTIONS)
-    public void saveOptions(HttpServletRequest resquest,HttpServletResponse response) {
-        response.setStatus(200);
-    }
-}
-</code></pre>
-
-<p>通过以上配置，就可以实现全接口的跨域处理。</p>
-
-<p>Ps：在Spring MVC 4.2以上版本中还可以通过以下方式实现：</p>
-
-<pre><code>@Configuration
-public class MigratedConfiguration {
-    @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurerAdapter() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping(&quot;/**&quot;).allowedOrigins(&quot;http://www.a.com&quot;);
-            }
-        };
-    }
-}
-</code></pre>
+<p>如果要计算QPS，可以通过（number-of-queries * iterations）除以结果中的Average number of seconds to run all queries秒数。</p>
 
 	</div>
   <footer class="article-footer clearfix">
@@ -317,9 +291,7 @@ public class MigratedConfiguration {
 <div class="article-tags">
   <span></span>
   
-  <a href="http://piscesilent.github.io/tags/web">Web</a>
-  
-  <a href="http://piscesilent.github.io/tags/java">Java</a>
+  <a href="http://piscesilent.github.io/tags/mysql">MySQL</a>
   
 </div>
 
@@ -328,7 +300,7 @@ public class MigratedConfiguration {
 
 
   <div class="article-share" id="share">
-    <div data-url="http://piscesilent.github.io/post/CORS/" data-title="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" data-tsina="1" class="share clearfix">
+    <div data-url="http://piscesilent.github.io/post/MySql_benchmark/" data-title="MySQL 基准测试" data-tsina="1" class="share clearfix">
     </div>
   </div>
 </footer>
@@ -344,8 +316,8 @@ public class MigratedConfiguration {
 
 
 var disqus_config = function () {
-this.page.url = "http://piscesilent.github.io/post/CORS/";
-this.page.identifier = "http://piscesilent.github.io/post/CORS/";
+this.page.url = "http://piscesilent.github.io/post/MySql_benchmark/";
+this.page.identifier = "http://piscesilent.github.io/post/MySql_benchmark/";
 };
 (function() { 
 var d = document, s = d.createElement('script');
