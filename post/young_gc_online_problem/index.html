@@ -2,16 +2,16 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用 - SilenT&#39;s Blog</title>
+  <title>记一次Young GC引发的线上问题 - SilenT&#39;s Blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
-  <meta name="keywords" content="跨域,CORS,Spring MVC,Shiro,">
-  <meta name="description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用">
+  <meta name="keywords" content="JVM,Young GC,spring boot,">
+  <meta name="description" content="记一次Young GC引发的线上问题">
   <meta name="author" content="SilenT">
-  <meta itemprop="name" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用 - SilenT&#39;s Blog">
-  <meta itemprop="description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用">
+  <meta itemprop="name" content="记一次Young GC引发的线上问题 - SilenT&#39;s Blog">
+  <meta itemprop="description" content="记一次Young GC引发的线上问题">
   <meta itemprop="image" content="http://piscesilent.github.io/img/author.jpg">
   
-  <meta name="twitter:description" content="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" />
+  <meta name="twitter:description" content="记一次Young GC引发的线上问题" />
   
   <link rel="shortcut icon" href="http://piscesilent.github.io/img/favicon.ico"/>
   <link rel="apple-touch-icon" href="http://piscesilent.github.io/apple-touch-icon.png" />
@@ -58,7 +58,7 @@
 	<article itemprop="articleBody">
     <header class="article-info clearfix">
   <h1 itemprop="name">
-      <a href="http://piscesilent.github.io/post/CORS/" title="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" itemprop="url">跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用</a>
+      <a href="http://piscesilent.github.io/post/young_gc_online_problem/" title="记一次Young GC引发的线上问题" itemprop="url">记一次Young GC引发的线上问题</a>
   </h1>
   <p class="article-author">By
     
@@ -66,7 +66,7 @@
     
   </p>
   <p class="article-time">
-    <time datetime="2016-07-05 09:07:42 &#43;0800 CST" itemprop="datePublished">2016年07月05日</time>
+    <time datetime="2017-03-23 00:50:21 &#43;0800 CST" itemprop="datePublished">2017年03月23日</time>
   </p>
 </header>
 
@@ -74,241 +74,145 @@
     
     
 
-<p>CORS，即跨域资源共享（Cross-Origin Resource Sharing）
-跨站HTTP请求是指发起请求的资源所在域不同于该请求所指向资源所在的域的HTTP请求。</p>
+<p>最近将项目迁移到springboot上，在线上遇到一个不大不小的问题。表象上是每台服务器的程序处理了30到40个请求之后，下一个请求的响应时间必定是在1秒以上。</p>
 
-<p>CORS旨在定义一种规范让浏览器在接收到从提供者获取的资源时能够正决定是否应该将此资源分发给消费者作进一步处理。CROS利用资源提供者的显式授权来决定目标资源是否应该与消费者共享。</p>
+<h2 id="一-线上寻找问题">一、线上寻找问题</h2>
 
-<p>JavaScript出于安全方面的考虑，不允许跨域调用其他页面的对象，其同源策略说明如下：</p>
+<p>当发现问题后，第一反应是怀疑瓶颈在io上，即数据库的问题。但是之前对线上的数据库进行过基准测试和压力测试，根据问题发生的情况和现场简单测试，立马就排除了数据库的问题，因为简单的OPTIONS请求也可以引发这个问题。</p>
 
-<table>
-    <tr>
-        <th>链接</th>
-        <th>说明</th>
-        <th>是否跨域</th>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>www.a.com/a</p></td>
-        <td>同一域名</td>
-        <td>否</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>www.a.com/b</p></td>
-        <td>同一域名下的不同目录</td>
-        <td>否</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com:8080/a</p><p>www.a.com:8081/a</p></td>
-        <td>同一域名下的不同端口</td>
-        <td>是</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>api.a.com/a</p></td>
-        <td>子域不同</td>
-        <td>是</td>
-    </tr>
-    <tr>
-        <td><p>www.a.com/a</p><p>www.b.com/a</p></td>
-        <td>不同域名</td>
-        <td>是</td>
-    </tr>
-</table>
+<p>这时候只能登陆服务器排查问题，使用top -p简单查看情况，发现在问题发生的时候，cpu使用率比平时高出80%，这个肯定是极为不正常的情况。同时，tail日志发现，在响应的1秒多的时间中，居然没有输出任何日志，随后处理响应的日志打印出来，处理时间仅仅为5ms。</p>
 
-<hr />
+<p>问题到这里，不得不怀疑是不是GC造成的STW，将线上程序重新部署至测试服中，使用jstat定时打出JVM Heap信息来观察情况。本以为是Full GC导致长时间STW，但在问题发生时，并没有发生Full GC，且老年代内存使用情况稳定。既然问题不出在Full GC，抱着侥幸的心里观察了Young GC的情况，这时发现了一处奇怪的地方。问题出现前，是临近Young GC的时候，问题出现时，Young GC连续发生了两次！而且由于Young GC时间与响应时间也相差甚远，在这里做了一个推测，这个响应慢的原因有可能是触发Young GC之后重新产生大量新对象引起的。</p>
 
-<h1 id="一-cors相关">一、CORS相关</h1>
+<p><img src="http://raw.githubusercontent.com/Piscesilent/pic-store/master/young-gc-pic-1.png" alt="" /></p>
 
-<p>当一个现代浏览器制图要去进行跨域请求时（method为GET、HEAD时除外），浏览器会发送一个带有Origin参数的OPTIONS请求，即预检查请求，这个参数值就是当前域的域名。比如，当从
-    <a href="http://www.a.com">http://www.a.com</a>
-尝试去访问
-    www.b.com
-下的资源时，</p>
+<p>顺着思路走，这时候该怀疑JVM内存分配问题，用jmap查看Eden、From、To区，发现分配的内存是足够的。由于使用的是Parallel GC，尝试修改GC线程数，也无果。为了更好的验证问题的产生，测试程序打开了JMX，用JMC连接服务器将问题可视化。</p>
 
-<pre><code>Origin:http://www.a.com
-</code></pre>
+<p><img src="http://raw.githubusercontent.com/Piscesilent/pic-store/master/young-gc-pic-2.png" alt="" /></p>
 
-<p>将会附加在发往www.b.com的请求头上</p>
+<p>从图中可以清楚的看出问题所在，连续两次Young GC使得cpu占用率飙升。既然线上不能很好的找到问题，于是，选择线下找问题。</p>
 
-<p>当服务端接受到这个OPTIONS请求时，会有三种处理方式：</p>
+<h2 id="二-线下问题分析">二、线下问题分析</h2>
 
-<p>1、不允许进行跨域资源请求</p>
+<p>为了能在线下找到问题，我选择在问题发生的前后dump出JVM Heap信息到文件中。将文件导入到Eclipse Memory Analyzer中，并将文件信息进行比对。在这过程中，org.apache.catalina.webresources.StandardRoot类的实例大小变化引起了我的注意。经过几个文件的比对，该实例在Young GC前后retained heap变化有18M之多，在这里验证了前面的假设。</p>
 
-<p>2、允许所有的域进行资源访问，即在响应头上加入：</p>
+<p>StandardRoot类是对webapp提供资源的实现，继续往下看，在一个List中引用了大量的JarWarResourceSet对象，这些对象就是资源文件的集合，每个对象将引用的jar映射到HashMap<String,JarEntry>中。接下来顺藤摸瓜，发现同一个JarWarResourceSet对象在GC前后retained heap变化很大，问题应该就出现在这里。再往下看，果然，在GC前后，HashMap<String,JarEntry>对象被置空了。</p>
 
-<pre><code>Access-Control-Allow-Origin: *
-</code></pre>
+<p><img src="http://raw.githubusercontent.com/Piscesilent/pic-store/master/young-gc-pic-3.png" alt="" /></p>
 
-<p>如果这样做，处于安全性的考虑，响应头上将不能携带cookie，所以一般的情况应该是这样：</p>
+<p>既然问题已经定位到，这时候该看看源码这里是怎么引起置空问题的了。</p>
 
-<p>3、在响应头上声明可以进行访问的域：</p>
+<h2 id="三-源码分析">三、源码分析</h2>
 
-<pre><code>Access-Control-Allow-Origin: http://www.a.com
-</code></pre>
+<p>首先从JarWarResourceSet类开始入手，在它的父类AbstractArchiveResourceSet中，找到了类型为HashMap<String,JarEntry>的成员变量archiveEntries。将这个类的源码看了一遍，发现了这个方法：</p>
 
-<p>这样，www.a.com就可以请求到www.b.com的资源。</p>
-
-<p>除此之外，与CORS相关的请求头信息还有：</p>
-
-<pre><code>Access-Control-Request-Method
-</code></pre>
-
-<p>这个请求头的作用在于指定接下来的跨域请求中的方法。</p>
-
-<pre><code>Access-Control-Request-Header
-</code></pre>
-
-<p>这个是指定跨域请求时所携带的自定义头信息。</p>
-
-<p>与CORS相关的响应体信息还有：</p>
-
-<pre><code>Access-Control-Allow-Methods
-</code></pre>
-
-<p>这个响应头的作用在于指定在接下来的真正的请求中被允许的方法（Method），比如在这里设置为&rdquo;POST&rdquo;，如果接下来的请求是PUT方法，那么将会失败。</p>
-
-<pre><code>Access-Control-Allow-Headers
-</code></pre>
-
-<p>这个是指请求中所允许携带的请求头信息。</p>
-
-<pre><code>Access-Control-Max-Age
-</code></pre>
-
-<p>可以指定缓存时间，避免浏览器频繁发送OPTIONS请求。</p>
-
-<pre><code>Access-Control-Allow-Credentials
-</code></pre>
-
-<p>这个响应头用来表明服务端是否支持用户凭证，比如Cookie、HTTP-Authentication、证书等。如果需要，则设置此值为true。</p>
-
-<h1 id="二-spring-mvc-中的应用">二、Spring MVC 中的应用</h1>
-
-<p>在实际Spring MVC + Shiro 项目中，由于进行前后端分离改造不可避免的要遇到跨域问题。</p>
-
-<p>首先，先要解决的是Spring MVC对OPTIONS请求拦截的问题。在Spring MVC servlet配置中，添加</p>
-
-<pre><code>&lt;init-param&gt;
-    &lt;param-name&gt;dispatchOptionsRequest&lt;/param-name&gt;
-    &lt;param-value&gt;true&lt;/param-value&gt;
-&lt;/init-param&gt;
-</code></pre>
-
-<p>允许DispatcherServlet分发器分发Options请求。</p>
-
-<p>在配置bean时，需要注意的是shiro也是会拦截OPTIONS请求的。由于OPTIONS请求中没有携带任何cookie信息，shiro直接会认为该请求没有权限进而拦截在外。所以，在shiro中要自定义一个filter，用于排除OPTIONS请求。</p>
-
-<pre><code>public class CorsUserAuthenticationFilter extends UserFilter {
-    /**
-     * 不过滤OPTIONS方法
-     */
-    @Override
-    protected boolean isAccessAllowed(ServletRequest request, ServletResponse response, Object mappedValue) {
-        HttpServletRequest httpRequest = WebUtils.toHttp(request);
-        if (&quot;OPTIONS&quot;.equalsIgnoreCase(httpRequest.getMethod())) {
-            return true;
+<pre><code>@Override
+public void gc() {
+    synchronized (archiveLock) {
+        if (archive != null &amp;&amp; archiveUseCount == 0) {
+            try {
+                archive.close();
+            } catch (IOException e) {
+                // Log at least WARN
+            }
+            archive = null;
+            archiveEntries = null;
         }
-
-        return super.isAccessAllowed(request, response, mappedValue);
     }
 }
 </code></pre>
 
-<p>在这里继承了shiro自带的UserFilter，并重写isAccessAllowed函数，如果请求的Method为OPTIONS时，返回true，表示不过滤。</p>
+<p>当调用gc()时，会将archiveEntries置空。问题到这里就很清楚了，只要阻止调用gc()，那么问题就可以解决。在StandardRoot类中就可以找到了：</p>
 
-<p>经过上述两步，OPTIONS请求我们就可以在程序中真正拿到并且可以控制其响应头参数，达到想要的目的。</p>
-
-<p>一开始在项目中使用比较原始的方法，在复杂请求的同名接口上新增一个OPTIONS请求处理：</p>
-
-<pre><code>@RequestMapping(value = &quot;&quot;, method = RequestMethod.OPTIONS)
-public HttpEntity optionsHandle(AppUser appUser, HttpServletRequest request,
-        HttpServletResponse response) {
-    MultiValueMap&lt;String, String&gt; map = new LinkedMultiValueMap&lt;String, String&gt;();
-    String origin = request.getHeader(&quot;Origin&quot;);
-    map.add(&quot;Access-Control-Allow-Credentials&quot;, &quot;true&quot;);
-    map.add(&quot;Access-Control-Allow-Origin&quot;, origin);
-    map.add(&quot;Access-Control-Allow-Methods&quot;, &quot;POST,GET,OPTIONS,DELETE,PUT,OPTIONS&quot;);
-    map.add(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Requested-With,Content-Type,Accept&quot;);
-    HttpEntity he = new HttpEntity(map);
-    return he;
-}
-</code></pre>
-
-<p>要注意的是@RequestMapping中的value要和复杂请求的value一致，即要保证他们俩的URL是一致的。在这边我只是为了方便调试才将请求的Origin直接放入
-    Access-Control-Allow-Origin
-中。在部署的时候，如果为了安全性考虑，可以将这个值写死，指定特定的域名才能跨域请求资源。</p>
-
-<p>当时测试通过后在考虑到项目中这么多接口，是否应该换一种方式进行处理更为妥当。考虑之后决定采用拦截器的方式实现。</p>
-
-<p>在Spring mvc的xml中添加：</p>
-
-<pre><code>&lt;mvc:interceptors&gt;
-    &lt;mvc:interceptor&gt;
-        &lt;mvc:mapping path=&quot;/**&quot; /&gt;
-        &lt;bean class=&quot;xxx.interceptor.CorsRequestInterceptor&quot; /&gt;
-    &lt;/mvc:interceptor&gt;
-&lt;/mvc:interceptors&gt;
-</code></pre>
-
-<p>这里配置了一个全地址匹配的拦截器，拦截器的实现如下：</p>
-
-<pre><code>public class CorsRequestInterceptor implements HandlerInterceptor {
-
-    String origin = &quot;&quot;;
-
-    @Override
-    public void afterCompletion(HttpServletRequest arg0,
-            HttpServletResponse arg1, Object arg2, Exception arg3)
-            throws Exception {
-    }
-
-    @Override
-    public void postHandle(HttpServletRequest arg0, HttpServletResponse response,
-            Object arg2, ModelAndView arg3) throws Exception {
-    }
-
-    @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
-            Object arg2) throws Exception {
-        origin = request.getHeader(&quot;Origin&quot;);
-        response.addHeader(&quot;Access-Control-Allow-Credentials&quot;,&quot;true&quot;);
-        response.addHeader(&quot;Access-Control-Allow-Origin&quot;, origin);
-        response.addHeader(&quot;Access-Control-Allow-Methods&quot;, &quot;POST,GET,DELETE,PUT,OPTIONS&quot;);
-        response.addHeader(&quot;Access-Control-Allow-Headers&quot;, &quot;X-Requested-With,Content-Type,Accept&quot;);
-        return true;
+<pre><code>@Override
+public void gc() {
+    for (List&lt;WebResourceSet&gt; list : allResources) {
+        for (WebResourceSet webResourceSet : list) {
+            webResourceSet.gc();
+        }
     }
 }
 </code></pre>
 
-<p>这样，可以在所有的响应中都加上跨域信息。</p>
+<p>每当StandardRoot执行gc()时，会调用所有的ResourceSet中的gc()。继续跟踪源代码，在该类的backgroundProcess()方法中会调用gc()。</p>
 
-<p>对于OPTIONS方法的处理，通过一个匹配全地址的Controller进行处理：</p>
+<pre><code>@Override
+public void backgroundProcess() {
+    cache.backgroundProcess();
+    gc();
+}
+</code></pre>
 
-<pre><code>@Controller
-public class OptionsMethodController {
-    @RequestMapping(value = {&quot;/**&quot;}, method = RequestMethod.OPTIONS)
-    public void saveOptions(HttpServletRequest resquest,HttpServletResponse response) {
-        response.setStatus(200);
+<p>从这个方法的注释中看出，该方法会被上下文周期性的调用。</p>
+
+<p>注意到getArchiveEntries()方法：</p>
+
+<pre><code>@Override
+protected HashMap&lt;String,JarEntry&gt; getArchiveEntries(boolean single) {
+    synchronized (archiveLock) {
+        if (archiveEntries == null) {
+            JarFile warFile = null;
+            InputStream jarFileIs = null;
+            archiveEntries = new HashMap&lt;&gt;();
+            try {
+                warFile = openJarFile();
+                JarEntry jarFileInWar = warFile.getJarEntry(archivePath);
+                jarFileIs = warFile.getInputStream(jarFileInWar);
+                try (JarInputStream jarIs = new JarInputStream(jarFileIs)) {
+                    JarEntry entry = jarIs.getNextJarEntry();
+                    while (entry != null) {
+                        archiveEntries.put(entry.getName(), entry);
+                        entry = jarIs.getNextJarEntry();
+                    }
+                    setManifest(jarIs.getManifest());
+                }
+            } catch (IOException ioe) {
+                ...
+            } finally {
+                ...
+            }
+        }
+        return archiveEntries;
     }
 }
 </code></pre>
 
-<p>通过以上配置，就可以实现全接口的跨域处理。</p>
+<p>在请求到来时，当调用JarWarResourceSet中的getArchiveEntries()时，如果archiveEntries为空，则会重新去读取JarEntry，并放入archiveEntries中。而在put到archiveEntries中时，又有可能因为产生新对象过多导致连续两次Young GC才能执行完getArchiveEntries()。</p>
 
-<p>Ps：在Spring MVC 4.2以上版本中还可以通过以下方式实现：</p>
+<h2 id="四-解决问题">四、解决问题</h2>
+
+<p>既然问题已经找到，那么解决问题就很简单了。只需要重写StandardRoot的gc()，使其成为一个空实现就好了。</p>
 
 <pre><code>@Configuration
-public class MigratedConfiguration {
+@EnableWebMvc
+public class SpringMvcConfig extends WebMvcConfigurerAdapter {
+
+    ......
+
     @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurerAdapter() {
+    public EmbeddedServletContainerFactory servletContainer() {
+        return new TomcatEmbeddedServletContainerFactory() {
             @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping(&quot;/**&quot;).allowedOrigins(&quot;http://www.a.com&quot;);
+            protected void postProcessContext(Context context) {
+                StandardRoot standardRoot = new StandardRoot(context) {
+                    @Override
+                    public void gc() {}
+                };
+                context.setResources(standardRoot);
             }
         };
     }
+
+    ......
+
 }
 </code></pre>
+
+<p>最后测试打包上线，在线上运行稳定且问题解决。</p>
+
+<h2 id="五-经验总结">五、经验总结</h2>
+
+<p>在线上遇到问题时，快速通过jvm自带工具进行定位问题。如果问题棘手，保存现场快照离线进行更进一步分析。最后结合源码定位问题代码，最后将问题解决。</p>
 
 	</div>
   <footer class="article-footer clearfix">
@@ -317,9 +221,9 @@ public class MigratedConfiguration {
 <div class="article-tags">
   <span></span>
   
-  <a href="http://piscesilent.github.io/tags/web">Web</a>
+  <a href="http://piscesilent.github.io/tags/jvm">JVM</a>
   
-  <a href="http://piscesilent.github.io/tags/java">Java</a>
+  <a href="http://piscesilent.github.io/tags/spring-boot">spring boot</a>
   
 </div>
 
@@ -328,7 +232,7 @@ public class MigratedConfiguration {
 
 
   <div class="article-share" id="share">
-    <div data-url="http://piscesilent.github.io/post/CORS/" data-title="跨域资源共享（CORS）介绍及在Spring MVC with Shiro 的应用" data-tsina="1" class="share clearfix">
+    <div data-url="http://piscesilent.github.io/post/young_gc_online_problem/" data-title="记一次Young GC引发的线上问题" data-tsina="1" class="share clearfix">
     </div>
   </div>
 </footer>
@@ -344,8 +248,8 @@ public class MigratedConfiguration {
 
 
 var disqus_config = function () {
-this.page.url = "http://piscesilent.github.io/post/CORS/";
-this.page.identifier = "http://piscesilent.github.io/post/CORS/";
+this.page.url = "http://piscesilent.github.io/post/young_gc_online_problem/";
+this.page.identifier = "http://piscesilent.github.io/post/young_gc_online_problem/";
 };
 (function() { 
 var d = document, s = d.createElement('script');

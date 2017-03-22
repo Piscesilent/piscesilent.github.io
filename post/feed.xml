@@ -6,8 +6,158 @@
     <description>Recent content in Posts on SilenT&#39;s Blog</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-CN</language>
-    <lastBuildDate>Thu, 01 Dec 2016 16:40:45 +0800</lastBuildDate>
+    <lastBuildDate>Thu, 23 Mar 2017 00:50:21 +0800</lastBuildDate>
     <atom:link href="http://Piscesilent.github.io/post/feed/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>记一次Young GC引发的线上问题</title>
+      <link>http://piscesilent.github.io/post/young_gc_online_problem/</link>
+      <pubDate>Thu, 23 Mar 2017 00:50:21 +0800</pubDate>
+      
+      <guid>http://piscesilent.github.io/post/young_gc_online_problem/</guid>
+      <description>
+
+&lt;p&gt;最近将项目迁移到springboot上，在线上遇到一个不大不小的问题。表象上是每台服务器的程序处理了30到40个请求之后，下一个请求的响应时间必定是在1秒以上。&lt;/p&gt;
+
+&lt;h2 id=&#34;一-线上寻找问题&#34;&gt;一、线上寻找问题&lt;/h2&gt;
+
+&lt;p&gt;当发现问题后，第一反应是怀疑瓶颈在io上，即数据库的问题。但是之前对线上的数据库进行过基准测试和压力测试，根据问题发生的情况和现场简单测试，立马就排除了数据库的问题，因为简单的OPTIONS请求也可以引发这个问题。&lt;/p&gt;
+
+&lt;p&gt;这时候只能登陆服务器排查问题，使用top -p简单查看情况，发现在问题发生的时候，cpu使用率比平时高出80%，这个肯定是极为不正常的情况。同时，tail日志发现，在响应的1秒多的时间中，居然没有输出任何日志，随后处理响应的日志打印出来，处理时间仅仅为5ms。&lt;/p&gt;
+
+&lt;p&gt;问题到这里，不得不怀疑是不是GC造成的STW，将线上程序重新部署至测试服中，使用jstat定时打出JVM Heap信息来观察情况。本以为是Full GC导致长时间STW，但在问题发生时，并没有发生Full GC，且老年代内存使用情况稳定。既然问题不出在Full GC，抱着侥幸的心里观察了Young GC的情况，这时发现了一处奇怪的地方。问题出现前，是临近Young GC的时候，问题出现时，Young GC连续发生了两次！而且由于Young GC时间与响应时间也相差甚远，在这里做了一个推测，这个响应慢的原因有可能是触发Young GC之后重新产生大量新对象引起的。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://raw.githubusercontent.com/Piscesilent/pic-store/master/young-gc-pic-1.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;顺着思路走，这时候该怀疑JVM内存分配问题，用jmap查看Eden、From、To区，发现分配的内存是足够的。由于使用的是Parallel GC，尝试修改GC线程数，也无果。为了更好的验证问题的产生，测试程序打开了JMX，用JMC连接服务器将问题可视化。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://raw.githubusercontent.com/Piscesilent/pic-store/master/young-gc-pic-2.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;从图中可以清楚的看出问题所在，连续两次Young GC使得cpu占用率飙升。既然线上不能很好的找到问题，于是，选择线下找问题。&lt;/p&gt;
+
+&lt;h2 id=&#34;二-线下问题分析&#34;&gt;二、线下问题分析&lt;/h2&gt;
+
+&lt;p&gt;为了能在线下找到问题，我选择在问题发生的前后dump出JVM Heap信息到文件中。将文件导入到Eclipse Memory Analyzer中，并将文件信息进行比对。在这过程中，org.apache.catalina.webresources.StandardRoot类的实例大小变化引起了我的注意。经过几个文件的比对，该实例在Young GC前后retained heap变化有18M之多，在这里验证了前面的假设。&lt;/p&gt;
+
+&lt;p&gt;StandardRoot类是对webapp提供资源的实现，继续往下看，在一个List中引用了大量的JarWarResourceSet对象，这些对象就是资源文件的集合，每个对象将引用的jar映射到HashMap&lt;String,JarEntry&gt;中。接下来顺藤摸瓜，发现同一个JarWarResourceSet对象在GC前后retained heap变化很大，问题应该就出现在这里。再往下看，果然，在GC前后，HashMap&lt;String,JarEntry&gt;对象被置空了。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&#34;http://raw.githubusercontent.com/Piscesilent/pic-store/master/young-gc-pic-3.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
+
+&lt;p&gt;既然问题已经定位到，这时候该看看源码这里是怎么引起置空问题的了。&lt;/p&gt;
+
+&lt;h2 id=&#34;三-源码分析&#34;&gt;三、源码分析&lt;/h2&gt;
+
+&lt;p&gt;首先从JarWarResourceSet类开始入手，在它的父类AbstractArchiveResourceSet中，找到了类型为HashMap&lt;String,JarEntry&gt;的成员变量archiveEntries。将这个类的源码看了一遍，发现了这个方法：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@Override
+public void gc() {
+    synchronized (archiveLock) {
+        if (archive != null &amp;amp;&amp;amp; archiveUseCount == 0) {
+            try {
+                archive.close();
+            } catch (IOException e) {
+                // Log at least WARN
+            }
+            archive = null;
+            archiveEntries = null;
+        }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;当调用gc()时，会将archiveEntries置空。问题到这里就很清楚了，只要阻止调用gc()，那么问题就可以解决。在StandardRoot类中就可以找到了：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@Override
+public void gc() {
+    for (List&amp;lt;WebResourceSet&amp;gt; list : allResources) {
+        for (WebResourceSet webResourceSet : list) {
+            webResourceSet.gc();
+        }
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;每当StandardRoot执行gc()时，会调用所有的ResourceSet中的gc()。继续跟踪源代码，在该类的backgroundProcess()方法中会调用gc()。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@Override
+public void backgroundProcess() {
+    cache.backgroundProcess();
+    gc();
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;从这个方法的注释中看出，该方法会被上下文周期性的调用。&lt;/p&gt;
+
+&lt;p&gt;注意到getArchiveEntries()方法：&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@Override
+protected HashMap&amp;lt;String,JarEntry&amp;gt; getArchiveEntries(boolean single) {
+    synchronized (archiveLock) {
+        if (archiveEntries == null) {
+            JarFile warFile = null;
+            InputStream jarFileIs = null;
+            archiveEntries = new HashMap&amp;lt;&amp;gt;();
+            try {
+                warFile = openJarFile();
+                JarEntry jarFileInWar = warFile.getJarEntry(archivePath);
+                jarFileIs = warFile.getInputStream(jarFileInWar);
+                try (JarInputStream jarIs = new JarInputStream(jarFileIs)) {
+                    JarEntry entry = jarIs.getNextJarEntry();
+                    while (entry != null) {
+                        archiveEntries.put(entry.getName(), entry);
+                        entry = jarIs.getNextJarEntry();
+                    }
+                    setManifest(jarIs.getManifest());
+                }
+            } catch (IOException ioe) {
+                ...
+            } finally {
+                ...
+            }
+        }
+        return archiveEntries;
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;在请求到来时，当调用JarWarResourceSet中的getArchiveEntries()时，如果archiveEntries为空，则会重新去读取JarEntry，并放入archiveEntries中。而在put到archiveEntries中时，又有可能因为产生新对象过多导致连续两次Young GC才能执行完getArchiveEntries()。&lt;/p&gt;
+
+&lt;h2 id=&#34;四-解决问题&#34;&gt;四、解决问题&lt;/h2&gt;
+
+&lt;p&gt;既然问题已经找到，那么解决问题就很简单了。只需要重写StandardRoot的gc()，使其成为一个空实现就好了。&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;@Configuration
+@EnableWebMvc
+public class SpringMvcConfig extends WebMvcConfigurerAdapter {
+
+    ......
+
+    @Bean
+    public EmbeddedServletContainerFactory servletContainer() {
+        return new TomcatEmbeddedServletContainerFactory() {
+            @Override
+            protected void postProcessContext(Context context) {
+                StandardRoot standardRoot = new StandardRoot(context) {
+                    @Override
+                    public void gc() {}
+                };
+                context.setResources(standardRoot);
+            }
+        };
+    }
+
+    ......
+
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;最后测试打包上线，在线上运行稳定且问题解决。&lt;/p&gt;
+
+&lt;h2 id=&#34;五-经验总结&#34;&gt;五、经验总结&lt;/h2&gt;
+
+&lt;p&gt;在线上遇到问题时，快速通过jvm自带工具进行定位问题。如果问题棘手，保存现场快照离线进行更进一步分析。最后结合源码定位问题代码，最后将问题解决。&lt;/p&gt;
+</description>
+    </item>
     
     <item>
       <title>MySQL 基准测试</title>
