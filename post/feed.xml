@@ -25,7 +25,7 @@
 
 &lt;p&gt;这时候只能登陆服务器排查问题，使用top -p简单查看情况，发现在问题发生的时候，cpu使用率比平时高出80%，这个肯定是极为不正常的情况。同时，tail日志发现，在响应的1秒多的时间中，居然没有输出任何日志，随后处理响应的日志打印出来，处理时间仅仅为5ms。&lt;/p&gt;
 
-&lt;p&gt;问题到这里，不得不怀疑是不是GC造成的STW，将线上程序重新部署至测试服中，使用jstat定时打出JVM Heap信息来观察情况。本以为是Full GC导致长时间STW，但在问题发生时，并没有发生Full GC，且老年代内存使用情况稳定。既然问题不出在Full GC，抱着侥幸的心里观察了Young GC的情况，这时发现了一处奇怪的地方。问题出现前，是临近Young GC的时候，问题出现时，Young GC连续发生了两次！而且由于Young GC时间与响应时间也相差甚远，在这里做了一个推测，这个响应慢的原因有可能是触发Young GC之后重新产生大量新对象引起的。&lt;/p&gt;
+&lt;p&gt;问题到这里，不得不怀疑是不是GC造成的STW，将线上程序重新部署至测试服中，使用jstat定时打出JVM Heap信息来观察情况。本以为是Full GC导致长时间STW，但在问题发生时，并没有发生Full GC，且老年代内存使用情况稳定。既然问题不出在Full GC，抱着侥幸的心里观察了Young GC的情况，这时发现了一处奇怪的地方。问题出现前，是临近Young GC的时候，问题出现时，Young GC连续发生了两次！但是，即使连续发生Young GC，GC时间相比起响应时间（1s）也是微不足道的。综合上述表象在这里做了一个推测，响应慢有可能是处理请求期间产生大量新对象引起的。&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&#34;http://raw.githubusercontent.com/Piscesilent/pic-store/master/young-gc-pic-1.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
 
@@ -39,7 +39,7 @@
 
 &lt;p&gt;为了能在线下找到问题，我选择在问题发生的前后dump出JVM Heap信息到文件中。将文件导入到Eclipse Memory Analyzer中，并将文件信息进行比对。在这过程中，org.apache.catalina.webresources.StandardRoot类的实例大小变化引起了我的注意。经过几个文件的比对，该实例在Young GC前后retained heap变化有18M之多，在这里验证了前面的假设。&lt;/p&gt;
 
-&lt;p&gt;StandardRoot类是对webapp提供资源的实现，继续往下看，在一个List中引用了大量的JarWarResourceSet对象，这些对象就是资源文件的集合，每个对象将引用的jar映射到HashMap&lt;String,JarEntry&gt;中。接下来顺藤摸瓜，发现同一个JarWarResourceSet对象在GC前后retained heap变化很大，问题应该就出现在这里。再往下看，果然，在GC前后，HashMap&lt;String,JarEntry&gt;对象被置空了。&lt;/p&gt;
+&lt;p&gt;StandardRoot类是对webapp提供资源的实现，继续往下看，在一个List中引用了大量的JarWarResourceSet对象，这些对象就是资源文件的集合，每个对象将引用的jar映射到&lt;code&gt;HashMap&amp;lt;String,JarEntry&amp;gt;&lt;/code&gt;中。接下来顺藤摸瓜，发现同一个JarWarResourceSet对象在GC前后retained heap变化很大，问题应该就出现在这里。再往下看，果然，在GC前后，类型为&lt;code&gt;HashMap&amp;lt;String,JarEntry&amp;gt;&lt;/code&gt;的对象被置空了。&lt;/p&gt;
 
 &lt;p&gt;&lt;img src=&#34;http://raw.githubusercontent.com/Piscesilent/pic-store/master/young-gc-pic-3.png&#34; alt=&#34;&#34; /&gt;&lt;/p&gt;
 
@@ -47,7 +47,7 @@
 
 &lt;h2 id=&#34;三-源码分析&#34;&gt;三、源码分析&lt;/h2&gt;
 
-&lt;p&gt;首先从JarWarResourceSet类开始入手，在它的父类AbstractArchiveResourceSet中，找到了类型为HashMap&lt;String,JarEntry&gt;的成员变量archiveEntries。将这个类的源码看了一遍，发现了这个方法：&lt;/p&gt;
+&lt;p&gt;首先从JarWarResourceSet类开始入手，在它的父类AbstractArchiveResourceSet中，找到了类型为&lt;code&gt;HashMap&amp;lt;String,JarEntry&amp;gt;&lt;/code&gt;的成员变量archiveEntries。将这个类的源码看了一遍，发现了这个方法：&lt;/p&gt;
 
 &lt;pre&gt;&lt;code&gt;@Override
 public void gc() {
@@ -120,7 +120,7 @@ protected HashMap&amp;lt;String,JarEntry&amp;gt; getArchiveEntries(boolean singl
 }
 &lt;/code&gt;&lt;/pre&gt;
 
-&lt;p&gt;在请求到来时，当调用JarWarResourceSet中的getArchiveEntries()时，如果archiveEntries为空，则会重新去读取JarEntry，并放入archiveEntries中。而在put到archiveEntries中时，又有可能因为产生新对象过多导致连续两次Young GC才能执行完getArchiveEntries()。&lt;/p&gt;
+&lt;p&gt;在请求到来时，当调用JarWarResourceSet中的getArchiveEntries()时，如果archiveEntries为空，则会重新去读取JarEntry，并放入archiveEntries中。读取Jar信息本身就是io操作，处理时间长，而在put到archiveEntries中时，又有可能因为产生新对象过多导致连续两次Young GC才能执行完getArchiveEntries()，所以导致该次请求时间过长。&lt;/p&gt;
 
 &lt;h2 id=&#34;四-解决问题&#34;&gt;四、解决问题&lt;/h2&gt;
 
